@@ -1,0 +1,45 @@
+{
+  "name": "cyberid",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "git@github.com:cyberconnecthq/cyberid.git",
+  "author": "peng.deng@cyberconnect.me",
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "lint:gh-check": "prettier --check **.{sol,js,md,html}",
+    "lint:check": "prettier --check **.{sol,js,md,html} && solhint --config ./config/.solhint.json --ignore-path ./config/.solhintignore -f table 'src/**/*.sol'",
+    "lint:fix": "prettier --write **.{sol,js,md}",
+    "prepare": "husky install",
+    "build": "forge build --force",
+    "gen_abi": "ts-node misc/gen_abi.ts",
+    "deploy_factory:mumbai": "source .env.mumbai && FOUNDRY_PROFILE=stg forge script script/DeployFactory.s.sol:DeployFactory --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvv --etherscan-api-key $API_KEY -vvv",
+    "deploy_deployer:mumbai": "source .env.mumbai && FOUNDRY_PROFILE=stg forge script script/DeployCreate2Deployer.s.sol:DeployerCreate2Deployer --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvv --etherscan-api-key $API_KEY -vvv"
+  },
+  "devDependencies": {
+    "husky": "^8.0.1",
+    "lint-staged": "^13.0.1",
+    "prettier": "^2.7.1",
+    "prettier-plugin-solidity": "^1.0.0-beta.19",
+    "solhint": "^3.3.7",
+    "solhint-plugin-prettier": "^0.0.5",
+    "solidity-coverage": "^0.7.21",
+    "ts-node": "^10.8.2",
+    "typechain": "^8.1.0",
+    "typescript": "^4.7.4"
+  },
+  "lint-staged": {
+    "*.{sol,js,md,html}": "prettier --write"
+  },
+  "prettier": {
+    "overrides": [
+      {
+        "files": "*.sol",
+        "options": {
+          "tabWidth": 4,
+          "printWidth": 80,
+          "bracketSpacing": true
+        }
+      }
+    ]
+  }
+}

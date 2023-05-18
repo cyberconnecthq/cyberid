@@ -1,9 +1,9 @@
 name: test
 
-on: workflow_dispatch
+on: [push]
 
 env:
-  FOUNDRY_PROFILE: ci
+  FOUNDRY_PROFILE: default
 
 jobs:
   check:
@@ -22,13 +22,20 @@ jobs:
         with:
           version: nightly
 
-      - name: Run Forge build
-        run: |
-          forge --version
-          forge build --sizes
-        id: build
+      # - name: Check gas snapshots
+      #   run: forge snapshot --check
 
       - name: Run Forge tests
         run: |
-          forge test -vvv
+          forge test -vvv --gas-report
         id: test
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 14
+
+      - name: Install modules
+        run: yarn
+
+      - name: Run lint
+        run: yarn run lint:gh-check
