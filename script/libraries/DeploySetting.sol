@@ -9,13 +9,12 @@ contract DeploySetting {
 
     DeployParameters internal deployParams;
 
-    uint256 internal constant POLYGON = 137;
-    uint256 internal constant MUMBAI = 80001;
+    uint256 internal constant BASE_GOERLI = 84531;
 
     function _setDeployParams() internal {
-        if (block.chainid == MUMBAI) {
+        if (block.chainid == BASE_GOERLI) {
             deployParams.deployerContract = address(
-                0x526010620cAB87A4afD0599914Bc57aac095Dd34
+                0xa6B0Df5d90eE6881b39da6DBCA36ebD44e6428D8
             );
         } else {
             revert("PARAMS_NOT_SET");

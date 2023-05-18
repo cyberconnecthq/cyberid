@@ -11,7 +11,7 @@ import { Create2Deployer } from "../../src/deployer/Create2Deployer.sol";
 
 library LibDeploy {
     // create2 deploy all contract with this protocol salt
-    bytes32 constant SALT = keccak256(bytes("CyberId"));
+    bytes32 constant SALT = keccak256(bytes("CyberId2"));
 
     string internal constant OUTPUT_FILE = "docs/deploy/";
 
@@ -19,8 +19,7 @@ library LibDeploy {
         uint256 chainId = block.chainid;
         string memory chainName;
         if (chainId == 1) chainName = "mainnet";
-        else if (chainId == 80001) chainName = "mumbai";
-        else if (chainId == 137) chainName = "polygon";
+        else if (chainId == 84531) chainName = "base_goerli";
         else chainName = "unknown";
         return
             string(
