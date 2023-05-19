@@ -4,7 +4,7 @@ pragma solidity 0.8.14;
 
 import "forge-std/Vm.sol";
 
-import { CyberId } from "../../src/CyberId.sol";
+import { CyberId } from "../../src/core/CyberId.sol";
 import { DeploySetting } from "./DeploySetting.sol";
 import { LibString } from "../../src/libraries/LibString.sol";
 import { Create2Deployer } from "../../src/deployer/Create2Deployer.sol";
@@ -74,7 +74,13 @@ library LibDeploy {
         DeploySetting.DeployParameters memory params
     ) internal returns (address cyberId) {
         Create2Deployer dc = Create2Deployer(params.deployerContract);
-        cyberId = dc.deploy(abi.encodePacked(type(CyberId).creationCode), SALT);
+        cyberId = dc.deploy(
+            abi.encodePacked(
+                type(CyberId).creationCode,
+                abi.encode("CYBER ID", "CYBERID")
+            ),
+            SALT
+        );
 
         _write(vm, "CyberId", cyberId);
     }

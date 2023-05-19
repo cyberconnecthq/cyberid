@@ -13,7 +13,8 @@
     "build": "forge build --force",
     "gen_abi": "ts-node misc/gen_abi.ts",
     "deploy_cyberid:base_goerli": "source .env.base_goerli && forge script script/DeployCyberId.s.sol:DeployCyberId --verify --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvv",
-    "deploy_deployer:base_goerli": "source .env.base_goerli && forge script script/DeployCreate2Deployer.s.sol:DeployerCreate2Deployer --verify --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvv"
+    "deploy_deployer:base_goerli": "source .env.base_goerli && forge script script/DeployCreate2Deployer.s.sol:DeployerCreate2Deployer --verify --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvv",
+    "verify_cyberid:base_goerli": "source .env.base_goerli && ETHERSCAN_API_KEY=$ETHERSCAN_API_KEY forge verify-contract --chain-id 84531 --compiler-version v0.8.14+commit.80d49f37 --constructor-args 0x000000000000000000000000000000000000000000000000000000000000004000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000008435942455220494400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000074359424552494400000000000000000000000000000000000000000000000000  0x675c74828e6EAbD1826Bee193806B2DB672403f4 src/core/CyberId.sol:CyberId  --watch"
   },
   "devDependencies": {
     "husky": "^8.0.1",
