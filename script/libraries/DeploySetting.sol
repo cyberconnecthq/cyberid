@@ -5,6 +5,7 @@ pragma solidity 0.8.14;
 contract DeploySetting {
     struct DeployParameters {
         address deployerContract;
+        address usdOracle;
     }
 
     DeployParameters internal deployParams;
@@ -15,6 +16,9 @@ contract DeploySetting {
         if (block.chainid == BASE_GOERLI) {
             deployParams.deployerContract = address(
                 0xa6B0Df5d90eE6881b39da6DBCA36ebD44e6428D8
+            );
+            deployParams.usdOracle = address(
+                0xcD2A119bD1F7DF95d706DE6F2057fDD45A0503E2
             );
         } else {
             revert("PARAMS_NOT_SET");

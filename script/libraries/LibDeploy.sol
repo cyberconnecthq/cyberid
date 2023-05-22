@@ -77,7 +77,7 @@ library LibDeploy {
         cyberId = dc.deploy(
             abi.encodePacked(
                 type(CyberId).creationCode,
-                abi.encode("CYBER ID", "CYBERID")
+                abi.encode("CYBER ID", "CYBERID", params.usdOracle)
             ),
             SALT
         );
