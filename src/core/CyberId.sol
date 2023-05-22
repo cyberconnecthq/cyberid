@@ -7,19 +7,20 @@ import { LibString } from "../libraries/LibString.sol";
 import { AggregatorV3Interface } from "chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import { FixedPointMathLib } from "solmate/src/utils/FixedPointMathLib.sol";
 import { ERC721 } from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
-import "openzeppelin-contracts/contracts/utils/Strings.sol";
+import { Strings } from "openzeppelin-contracts/contracts/utils/Strings.sol";
+import { Ownable2Step } from "openzeppelin-contracts/contracts/access/Ownable2Step.sol";
 
-contract CyberId is ERC721 {
+contract CyberId is ERC721, Ownable2Step {
     using LibString for *;
     using FixedPointMathLib for uint256;
 
     /*//////////////////////////////////////////////////////////////
-                            STORAGE
+                            PUBLIC STORAGE
     //////////////////////////////////////////////////////////////*/
 
     /**
      * @notice Flag that determines if registration can occur through trustedRegister or register
-     * @dev    Occupies slot 0, initialized to true and can only be changed to false
+     * @dev    Occupies slot 0, initialized to true and can only be changed to false.
      */
     bool public trustedOnly;
 
@@ -30,28 +31,25 @@ contract CyberId is ERC721 {
     mapping(bytes32 => uint256) public timestampOf;
 
     /**
-     * @notice Maps each uint256 representation of a cid to registration expire time.
+     * @notice ETH/USD Oracle address.
      * @dev    Occupies slot 2
-     */
-    mapping(uint256 => uint) _expiries;
-
-    /**
-     * @notice Oracle address.
-     * @dev    Occupies slot 3
      */
     AggregatorV3Interface public immutable usdOracle;
 
     /**
-     * @notice The address allowed to call trustedRegister
-     * @dev    Occupies slot 4
-     */
-    address public trustedCaller;
-
-    /**
-     * @notice The address allowed to call trustedRegister
-     * @dev    Occupies slot 5
+     * @notice Token URI prefix.
+     * @dev    Occupies slot 3
      */
     string public baseTokenUri;
+
+    /*//////////////////////////////////////////////////////////////
+                            INTERNAL STORAGE
+    //////////////////////////////////////////////////////////////*/
+    /**
+     * @notice Maps each uint256 representation of a cid to registration expire time.
+     * @dev    Occupies slot 4
+     */
+    mapping(uint256 => uint) _expiries;
 
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
@@ -79,12 +77,32 @@ contract CyberId is ERC721 {
     //////////////////////////////////////////////////////////////*/
 
     /**
+     * @dev Emit an event when a cid is registered.
+     *
+     * @param cid    The cid
+     * @param to     The address that owns the cid
+     * @param expiry The timestamp at which the registration expires
+     * @param cost   The cost of the registration
+     */
+    event Register(string cid, address to, uint256 expiry, uint256 cost);
+
+    /**
      * @dev Emit an event when a cid is renewed.
      *
-     * @param cid The cid
-     * @param expiry  The timestamp at which the renewal expires
+     * @param cid    The cid
+     * @param expiry The timestamp at which the renewal expires
+     * @param cost   The cost of the renewal
      */
-    event Renew(string cid, uint256 expiry);
+    event Renew(string cid, uint256 expiry, uint256 cost);
+
+    /**
+     * @dev Emit an event when a cid is bid on.
+     *
+     * @param cid    The cid
+     * @param expiry The timestamp at which the registration expires
+     * @param cost   The cost of the bid
+     */
+    event Bid(string cid, uint256 expiry, uint256 cost);
 
     /*//////////////////////////////////////////////////////////////
                             CONSTRUCTOR
@@ -104,7 +122,7 @@ contract CyberId is ERC721 {
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Check if a cid is available for registration.
+     * @notice Checks if a cid is available for registration.
      *
      * @param cid The cid to register
      */
@@ -116,13 +134,13 @@ contract CyberId is ERC721 {
     }
 
     /**
-     * @notice Generate a commitment to use in a commit-reveal scheme to register a cid and
+     * @notice Generates a commitment to use in a commit-reveal scheme to register a cid and
      *         prevent front-running.
      *
-     * @param cid   The cid to be registered
-     * @param to     The address that will own the cid
-     * @param roundId     The usd oracle roundId
-     * @param secret A secret that will be broadcast on-chain during the reveal
+     * @param cid     The cid to registere
+     * @param to      The address that will own the cid
+     * @param roundId The usd oracle roundId
+     * @param secret  A secret that will be broadcast on-chain during the reveal
      */
     function generateCommit(
         string calldata cid,
@@ -135,7 +153,7 @@ contract CyberId is ERC721 {
     }
 
     /**
-     * @notice Save a commitment on-chain which can be revealed later to register a cid. The
+     * @notice Saves a commitment on-chain which can be revealed later to register a cid. The
      *         commit reveal scheme protects the register action from being front run.
      *
      * @param commitment The commitment hash to be saved on-chain
@@ -147,7 +165,7 @@ contract CyberId is ERC721 {
          * Revert unless some time has passed since the last commit to prevent griefing by
          * replaying the commit and restarting the REVEAL_DELAY timer.
          *
-         *  Safety: cannot overflow because timestampOf[commitment] is a block.timestamp or zero
+         * Safety: cannot overflow because timestampOf[commitment] is a block.timestamp or zero
          */
         unchecked {
             require(
@@ -160,13 +178,13 @@ contract CyberId is ERC721 {
     }
 
     /**
-     * @notice Mint a new cid if the inputs match a previous commit and if it was called at least
+     * @notice Mints a new cid if the inputs match a previous commit and if it was called at least
      *         60 seconds after the commit's timestamp to prevent frontrunning within the same block.
      *
-     * @param cid    The cid to register
-     * @param to       The address that will own the fname
-     * @param roundId     The usd oracle roundId
-     * @param secret   The secret value in the commitment
+     * @param cid          The cid to register
+     * @param to           The address that will own the cid
+     * @param roundId      The usd oracle roundId
+     * @param secret       The secret value in the commitment
      * @param durationYear The duration of the registration. Unit: year
      */
     function register(
@@ -174,7 +192,7 @@ contract CyberId is ERC721 {
         address to,
         uint80 roundId,
         bytes32 secret,
-        uint durationYear
+        uint8 durationYear
     ) external payable {
         bytes32 commitment = generateCommit(cid, to, roundId, secret);
         uint256 commitTs = timestampOf[commitment];
@@ -196,13 +214,13 @@ contract CyberId is ERC721 {
         require(msg.value >= cost, "INSUFFICIENT_FUNDS");
 
         /**
-         * Mints the token by calling the ERC-721 _mint() function and using the uint256 value of
-         * the username as the tokenId. The _mint() function ensures that the to address isnt 0
+         * Mints the token by calling the ERC-721 _safeMint() function.
+         * The _safeMint() function ensures that the to address isnt 0
          * and that the tokenId is not already minted.
          */
         bytes32 label = keccak256(bytes(cid));
         uint256 tokenId = uint256(label);
-        super._mint(to, tokenId);
+        super._safeMint(to, tokenId);
 
         /**
          * Set the expiration timestamp
@@ -215,23 +233,31 @@ contract CyberId is ERC721 {
             (bool sent, ) = msg.sender.call{ value: msg.value - cost }("");
             require(sent, "REFUND_FAILED");
         }
+        emit Register(cid, to, _expiries[tokenId], cost);
     }
 
+    /**
+     * @notice Mints a new cid before public registration starts.
+     *
+     * @param cid          The cid to register
+     * @param to           The address that will own the cid
+     * @param durationYear The duration of the registration. Unit: year
+     */
     function trustedRegister(
         string calldata cid,
         address to,
-        uint durationYear
-    ) external {
+        uint8 durationYear
+    ) external onlyOwner {
         require(trustedOnly, "REGISTRATION_STARTED");
-        require(msg.sender == trustedCaller, "UNAUTHORIZED");
         require(available(cid), "INVALID_NAME");
         require(durationYear >= 1, "MIN_DURATION_ONE_YEAR");
         bytes32 label = keccak256(bytes(cid));
         uint256 tokenId = uint256(label);
-        super._mint(to, tokenId);
+        super._safeMint(to, tokenId);
         unchecked {
             _expiries[tokenId] = block.timestamp + durationYear * 365 days;
         }
+        emit Register(cid, to, _expiries[tokenId], 0);
     }
 
     /**
@@ -251,8 +277,6 @@ contract CyberId is ERC721 {
 
         /**
          * Revert if the cid has passed out of the renewable period into the biddable period.
-         *
-         * Safety: expiryTs is set one year ahead of block.timestamp and cannot overflow.
          */
         unchecked {
             require(block.timestamp < expiryTs + GRACE_PERIOD, "NOT_RENEWABLE");
@@ -260,13 +284,12 @@ contract CyberId is ERC721 {
 
         /**
          * Renew the name by setting the new expiration timestamp
-         *
-         * Safety: tokenId is not owned by address(0) because of INVARIANT 1B + 2
          */
         _expiries[tokenId] += durationYear * 365 days;
 
-        emit Renew(cid, uint256(_expiries[tokenId]));
-
+        /**
+         * Already checked msg.value >= cost
+         */
         uint256 overpayment;
         unchecked {
             overpayment = msg.value - cost;
@@ -277,14 +300,15 @@ contract CyberId is ERC721 {
             (bool success, ) = msg.sender.call{ value: overpayment }("");
             require(success, "REFUND_FAILED");
         }
+        emit Renew(cid, uint256(_expiries[tokenId]), cost);
     }
 
     /**
      * @notice Bid to purchase an expired cid in a dutch auction and register it for a year. The
      *         winning bid starts at ~1000.01 ETH decays exponentially until it reaches 0.
      *
-     * @param to   The address where the fname should be transferred
-     * @param cid  The cid to bid on
+     * @param to  The address where the cid should be transferred
+     * @param cid The cid to bid on
      */
     function bid(address to, string calldata cid) external payable {
         bytes32 label = keccak256(bytes(cid));
@@ -295,7 +319,6 @@ contract CyberId is ERC721 {
 
         /**
          * Revert if the cid is not yet in the auction period.
-         *
          */
         uint256 auctionStartTimestamp;
         unchecked {
@@ -363,12 +386,12 @@ contract CyberId is ERC721 {
 
         /**
          * Transfer the cid to the new owner by calling the ERC-721 transfer function, and update
-         * the expiration date and recovery addres. The current owner is determined with
+         * the expiration. The current owner is determined with
          * super.ownerOf which will not revert even if expired.
          *
          * Safety: expiryTs cannot overflow given block.timestamp and registration period sizes.
          */
-        _transfer(super.ownerOf(tokenId), to, tokenId);
+        _safeTransfer(super.ownerOf(tokenId), to, tokenId, "");
 
         unchecked {
             _expiries[tokenId] = block.timestamp + 365 days;
@@ -377,8 +400,7 @@ contract CyberId is ERC721 {
         /**
          * Refund overpayment to the caller and revert if the refund fails.
          *
-         * Safety: msg.value >= _fee by check above, so this cannot overflow
-         * Perf: Call msg.sender instead of _msgSender() to save ~100 gas b/c we don't need meta-tx
+         * Safety: msg.value >= price by check above, so this cannot overflow
          */
         uint256 overpayment;
 
@@ -391,6 +413,14 @@ contract CyberId is ERC721 {
             (bool success, ) = msg.sender.call{ value: overpayment }("");
             require(success, "REFUND_FAILED");
         }
+        emit Bid(cid, _expiries[tokenId], price);
+    }
+
+    /**
+     * @notice Withdraw the contract's balance to the owner.
+     */
+    function withdraw() external {
+        payable(owner()).transfer(address(this).balance);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -413,35 +443,27 @@ contract CyberId is ERC721 {
         return super.ownerOf(tokenId);
     }
 
-    /* Audit: ERC721 balanceOf will over report owner balance if the name is expired */
-
     /**
      * @notice Override transferFrom to throw if the name is renewable or biddable.
      *
-     * @param from    The address which currently holds the fname
-     * @param to      The address to transfer the fname to
-     * @param tokenId The uint256 representation of the fname to transfer
+     * @param from    The address which currently holds the cid
+     * @param to      The address to transfer the cid to
+     * @param tokenId The uint256 representation of the cid to transfer
      */
     function transferFrom(
         address from,
         address to,
         uint256 tokenId
     ) public override {
-        /* Revert if fname was registered once and the expiration time has passed */
-        uint256 expiryTs = _expiries[tokenId];
-        if (expiryTs != 0) {
-            require(block.timestamp < expiryTs, "EXPIRED");
-        }
-
-        super.transferFrom(from, to, tokenId);
+        this.safeTransferFrom(from, to, tokenId, "");
     }
 
     /**
      * @notice Override safeTransferFrom to throw if the name is renewable or biddable.
      *
-     * @param from     The address which currently holds the fname
-     * @param to       The address to transfer the fname to
-     * @param tokenId  The uint256 tokenId of the fname to transfer
+     * @param from     The address which currently holds the cid
+     * @param to       The address to transfer the cid to
+     * @param tokenId  The uint256 tokenId of the cid to transfer
      * @param data     Additional data with no specified format, sent in call to `to`
      */
     function safeTransferFrom(
@@ -450,7 +472,7 @@ contract CyberId is ERC721 {
         uint256 tokenId,
         bytes memory data
     ) public override {
-        /* Revert if fname was registered once and the expiration time has passed */
+        /* Revert if cid was registered once and the expiration time has passed */
         uint256 expiryTs = _expiries[tokenId];
         if (expiryTs != 0) {
             require(block.timestamp < expiryTs, "EXPIRED");
@@ -496,6 +518,28 @@ contract CyberId is ERC721 {
     ) public view returns (uint256) {
         // todo: price calculation
         return _attoUSDToWei(cid.strlen() * durationYear);
+    }
+
+    function getTokenId(string calldata cid) public pure returns (uint256) {
+        return uint256(keccak256(bytes(cid)));
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            OWNER ONLY
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Disables trustedRegister and enables register calls from any address.
+     */
+    function disableTrustedOnly() external onlyOwner {
+        delete trustedOnly;
+    }
+
+    /**
+     * @notice Set the base token uri.
+     */
+    function setBaseTokenUri(string calldata uri) external onlyOwner {
+        baseTokenUri = uri;
     }
 
     /*//////////////////////////////////////////////////////////////

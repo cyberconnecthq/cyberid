@@ -8,7 +8,8 @@ contract MockUsdOracle is AggregatorV3Interface {
     mapping(uint80 => int256) public _prices;
 
     constructor() {
-        _prices[0] = 1e8;
+        _prices[0] = 1800 * 1e8;
+        _prices[1] = 3600 * 1e8;
     }
 
     function decimals() external pure override returns (uint8) {
