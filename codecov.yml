@@ -1,4 +1,5 @@
-component_management:
-  default_rules: # Dict. rules inherited by all components that don't define a tag for themselves.
-    paths: # List. Path filters.
-      - src/core/**
+ignore:
+  - "script"
+  - "src/libraries"
+  - "src/deployer"
+  - "test"
