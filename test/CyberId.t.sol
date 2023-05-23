@@ -62,10 +62,10 @@ contract CyberIdTest is Test {
         assertFalse(cid.available(unicode"bo"));
         assertFalse(cid.available(unicode"二字"));
         assertFalse(cid.available(unicode"😋😋"));
-        assertFalse(cid.available("zerowidthcharacter\u200b"));
-        assertFalse(cid.available("zerowidthcharacter\u200c"));
-        assertFalse(cid.available("zerowidthcharacter\u200d"));
-        assertFalse(cid.available("zerowidthcharacter\ufeff"));
+        assertFalse(cid.available("zerowidthcharacter\u200a\u200b"));
+        assertFalse(cid.available("zerowidthcharacter\u200a\u200c"));
+        assertFalse(cid.available("zerowidthcharacter\u200a\u200d"));
+        assertFalse(cid.available("zerowidthcharacter\ufefe\ufeff"));
     }
 
     function test_RandomSecret_GenerateCommit_Success() public {
@@ -456,9 +456,33 @@ contract CyberIdTest is Test {
         cid.safeTransferFrom(aliceAddress, bobAddress, tokenId, "");
     }
 
+    function test_NameExpired_SafeTransferFrom_RevertExpired() public {
+        cid.disableTrustedOnly();
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
+
+        vm.warp(startTs + 61 seconds + 365 days);
+        uint256 tokenId = cid.getTokenId("alice");
+        vm.expectRevert("EXPIRED");
+        cid.safeTransferFrom(aliceAddress, bobAddress, tokenId, "");
+    }
+
     function test_NotRegistered_TransferFrom_RevertInvalidToken() public {
         uint256 tokenId = cid.getTokenId("alice");
         vm.expectRevert("ERC721: invalid token ID");
+        cid.transferFrom(aliceAddress, bobAddress, tokenId);
+    }
+
+    function test_NameExpired_TransferFrom_RevertExpired() public {
+        cid.disableTrustedOnly();
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
+
+        vm.warp(startTs + 61 seconds + 365 days);
+        uint256 tokenId = cid.getTokenId("alice");
+        vm.expectRevert("EXPIRED");
         cid.transferFrom(aliceAddress, bobAddress, tokenId);
     }
 
