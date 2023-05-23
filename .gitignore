@@ -18,3 +18,5 @@ node_modules/
 broadcast/
 .DS_Store
 artifacts/
+
+Icov.info
