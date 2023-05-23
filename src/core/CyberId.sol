@@ -42,14 +42,11 @@ contract CyberId is ERC721, Ownable2Step {
      */
     string public baseTokenUri;
 
-    /*//////////////////////////////////////////////////////////////
-                            INTERNAL STORAGE
-    //////////////////////////////////////////////////////////////*/
     /**
      * @notice Maps each uint256 representation of a cid to registration expire time.
      * @dev    Occupies slot 4
      */
-    mapping(uint256 => uint) _expiries;
+    mapping(uint256 => uint256) public expiries;
 
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
@@ -134,8 +131,8 @@ contract CyberId is ERC721, Ownable2Step {
     function available(string calldata cid) public view returns (bool) {
         bytes32 label = keccak256(bytes(cid));
         return
-            valid(cid) &&
-            _expiries[uint256(label)] + GRACE_PERIOD < block.timestamp;
+            _valid(cid) &&
+            expiries[uint256(label)] + GRACE_PERIOD < block.timestamp;
     }
 
     /**
@@ -163,7 +160,7 @@ contract CyberId is ERC721, Ownable2Step {
      *
      * @param commitment The commitment hash to be saved on-chain
      */
-    function commit(bytes32 commitment) public {
+    function commit(bytes32 commitment) external {
         require(!trustedOnly, "REGISTRATION_NOT_STARTED");
 
         /**
@@ -231,14 +228,22 @@ contract CyberId is ERC721, Ownable2Step {
          * Set the expiration timestamp
          */
         unchecked {
-            _expiries[tokenId] = block.timestamp + durationYear * 365 days;
+            expiries[tokenId] = block.timestamp + durationYear * 365 days;
         }
 
-        if (msg.value > cost) {
-            (bool sent, ) = msg.sender.call{ value: msg.value - cost }("");
+        /**
+         * Already checked msg.value >= cost
+         */
+        uint256 overpayment;
+        unchecked {
+            overpayment = msg.value - cost;
+        }
+
+        if (overpayment > 0) {
+            (bool sent, ) = msg.sender.call{ value: overpayment }("");
             require(sent, "REFUND_FAILED");
         }
-        emit Register(cid, to, _expiries[tokenId], cost);
+        emit Register(cid, to, expiries[tokenId], cost);
     }
 
     /**
@@ -260,9 +265,9 @@ contract CyberId is ERC721, Ownable2Step {
         uint256 tokenId = uint256(label);
         super._safeMint(to, tokenId);
         unchecked {
-            _expiries[tokenId] = block.timestamp + durationYear * 365 days;
+            expiries[tokenId] = block.timestamp + durationYear * 365 days;
         }
-        emit Register(cid, to, _expiries[tokenId], 0);
+        emit Register(cid, to, expiries[tokenId], 0);
     }
 
     /**
@@ -271,13 +276,10 @@ contract CyberId is ERC721, Ownable2Step {
      * @param cid The the cid to renew
      */
     function renew(string calldata cid, uint8 durationYear) external payable {
-        uint256 cost = getPriceWei(cid, durationYear);
-        require(msg.value >= cost, "INSUFFICIENT_FUNDS");
-
         /* Revert if the cid's tokenId has never been registered */
         bytes32 label = keccak256(bytes(cid));
         uint256 tokenId = uint256(label);
-        uint256 expiryTs = uint256(_expiries[tokenId]);
+        uint256 expiryTs = expiries[tokenId];
         require(expiryTs > 0, "NOT_REGISTERED");
 
         /**
@@ -287,10 +289,13 @@ contract CyberId is ERC721, Ownable2Step {
             require(block.timestamp < expiryTs + GRACE_PERIOD, "NOT_RENEWABLE");
         }
 
+        uint256 cost = getPriceWei(cid, durationYear);
+        require(msg.value >= cost, "INSUFFICIENT_FUNDS");
+
         /**
          * Renew the name by setting the new expiration timestamp
          */
-        _expiries[tokenId] += durationYear * 365 days;
+        expiries[tokenId] += durationYear * 365 days;
 
         /**
          * Already checked msg.value >= cost
@@ -305,7 +310,7 @@ contract CyberId is ERC721, Ownable2Step {
             (bool success, ) = msg.sender.call{ value: overpayment }("");
             require(success, "REFUND_FAILED");
         }
-        emit Renew(cid, uint256(_expiries[tokenId]), cost);
+        emit Renew(cid, expiries[tokenId], cost);
     }
 
     /**
@@ -319,7 +324,7 @@ contract CyberId is ERC721, Ownable2Step {
         bytes32 label = keccak256(bytes(cid));
         uint256 tokenId = uint256(label);
         /* Revert if the token was never registered */
-        uint256 expiryTs = uint256(_expiries[tokenId]);
+        uint256 expiryTs = expiries[tokenId];
         require(expiryTs > 0, "NOT_REGISTERED");
 
         /**
@@ -363,10 +368,10 @@ contract CyberId is ERC721, Ownable2Step {
          * Safety: auctionStartTimestamp <= block.timestamp and their difference will be under
          * 10^10 for the next 50 years, which can be safely multiplied with DIV_28800_UD60X18
          *
-         * Safety/Audit: price calcuation cannot intuitively over or underflow, but needs proof
+         * Safety/Audit: cost calcuation cannot intuitively over or underflow, but needs proof
          */
 
-        uint256 price;
+        uint256 cost;
         uint256 baseFee = getPriceWei(cid, 1);
 
         unchecked {
@@ -374,7 +379,7 @@ contract CyberId is ERC721, Ownable2Step {
                 (block.timestamp - auctionStartTimestamp) * DIV_28800_UD60X18
             );
 
-            price =
+            cost =
                 BID_START_PRICE.mulWadDown(
                     uint256(
                         FixedPointMathLib.powWad(
@@ -386,8 +391,8 @@ contract CyberId is ERC721, Ownable2Step {
                 baseFee;
         }
 
-        /* Revert if the transaction cannot pay the full price of the bid */
-        require(msg.value >= price, "INSUFFICIENT_FUNDS");
+        /* Revert if the transaction cannot pay the full cost of the bid */
+        require(msg.value >= cost, "INSUFFICIENT_FUNDS");
 
         /**
          * Transfer the cid to the new owner by calling the ERC-721 transfer function, and update
@@ -399,18 +404,18 @@ contract CyberId is ERC721, Ownable2Step {
         _safeTransfer(super.ownerOf(tokenId), to, tokenId, "");
 
         unchecked {
-            _expiries[tokenId] = block.timestamp + 365 days;
+            expiries[tokenId] = block.timestamp + 365 days;
         }
 
         /**
          * Refund overpayment to the caller and revert if the refund fails.
          *
-         * Safety: msg.value >= price by check above, so this cannot overflow
+         * Safety: msg.value >= cost by check above, so this cannot overflow
          */
         uint256 overpayment;
 
         unchecked {
-            overpayment = msg.value - price;
+            overpayment = msg.value - cost;
         }
 
         if (overpayment > 0) {
@@ -418,7 +423,7 @@ contract CyberId is ERC721, Ownable2Step {
             (bool success, ) = msg.sender.call{ value: overpayment }("");
             require(success, "REFUND_FAILED");
         }
-        emit Bid(cid, _expiries[tokenId], price);
+        emit Bid(cid, expiries[tokenId], cost);
     }
 
     /**
@@ -439,7 +444,7 @@ contract CyberId is ERC721, Ownable2Step {
      */
     function ownerOf(uint256 tokenId) public view override returns (address) {
         /* Revert if cid was registered once and the expiration time has passed */
-        uint256 expiryTs = _expiries[tokenId];
+        uint256 expiryTs = expiries[tokenId];
         if (expiryTs != 0) {
             require(block.timestamp < expiryTs, "EXPIRED");
         }
@@ -460,7 +465,13 @@ contract CyberId is ERC721, Ownable2Step {
         address to,
         uint256 tokenId
     ) public override {
-        this.safeTransferFrom(from, to, tokenId, "");
+        /* Revert if cid was registered once and the expiration time has passed */
+        uint256 expiryTs = expiries[tokenId];
+        if (expiryTs != 0) {
+            require(block.timestamp < expiryTs, "EXPIRED");
+        }
+
+        super.safeTransferFrom(from, to, tokenId, "");
     }
 
     /**
@@ -478,7 +489,7 @@ contract CyberId is ERC721, Ownable2Step {
         bytes memory data
     ) public override {
         /* Revert if cid was registered once and the expiration time has passed */
-        uint256 expiryTs = _expiries[tokenId];
+        uint256 expiryTs = expiries[tokenId];
         if (expiryTs != 0) {
             require(block.timestamp < expiryTs, "EXPIRED");
         }
@@ -525,7 +536,7 @@ contract CyberId is ERC721, Ownable2Step {
         return _attoUSDToWei(cid.strlen() * durationYear);
     }
 
-    function getTokenId(string calldata cid) public pure returns (uint256) {
+    function getTokenId(string calldata cid) external pure returns (uint256) {
         return uint256(keccak256(bytes(cid)));
     }
 
@@ -551,7 +562,7 @@ contract CyberId is ERC721, Ownable2Step {
                              INTERNAL LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function valid(string calldata cid) public pure returns (bool) {
+    function _valid(string calldata cid) internal pure returns (bool) {
         // check unicode rune count, if rune count is >=3, byte length must be >=3.
         if (cid.strlen() < 3) {
             return false;
