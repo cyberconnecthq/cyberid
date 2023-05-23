@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/gh/cyberconnecthq/cyberid/branch/main/graph/badge.svg?token=H7HK7TUBW6)](https://codecov.io/gh/cyberconnecthq/cyberid)
+
 # cyberid
 
 # Set Up

@@ -19,4 +19,4 @@ broadcast/
 .DS_Store
 artifacts/
 
-Icov.info
+lcov.info
