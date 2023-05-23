@@ -46,10 +46,10 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
-          token: 5988e766-42d2-43ef-813c-56f5b7cbcc6d
+          token: aec0abae-5f65-4055-93c7-4509b8c956ea
           directory: .
           env_vars: OS,PYTHON
           fail_ci_if_error: true
           files: ./lcov.info
-          name: cybercontracts-coverage
+          name: cyberid-coverage
           verbose: true
