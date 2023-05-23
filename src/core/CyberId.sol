@@ -84,7 +84,12 @@ contract CyberId is ERC721, Ownable2Step {
      * @param expiry The timestamp at which the registration expires
      * @param cost   The cost of the registration
      */
-    event Register(string cid, address to, uint256 expiry, uint256 cost);
+    event Register(
+        string cid,
+        address indexed to,
+        uint256 expiry,
+        uint256 cost
+    );
 
     /**
      * @dev Emit an event when a cid is renewed.
