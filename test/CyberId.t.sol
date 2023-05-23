@@ -235,6 +235,13 @@ contract CyberIdTest is Test {
         cid.trustedRegister("alice", aliceAddress, 0);
     }
 
+    function test_TrustedOnly_TrustedRegisterInavlidName_RevertInvalidName()
+        public
+    {
+        vm.expectRevert("INVALID_NAME");
+        cid.trustedRegister("a", aliceAddress, 0);
+    }
+
     function test_DisableTrustedOnly_TrustedRegister_RevertRegistrationStarted()
         public
     {
@@ -431,6 +438,12 @@ contract CyberIdTest is Test {
         cid.ownerOf(tokenId);
     }
 
+    function test_NotRegistered_SafeTransferFrom_RevertInvalidToken() public {
+        uint256 tokenId = cid.getTokenId("alice");
+        vm.expectRevert("ERC721: invalid token ID");
+        cid.safeTransferFrom(aliceAddress, bobAddress, tokenId, "");
+    }
+
     function test_Registered_SafeTransferFrom_Success() public {
         cid.disableTrustedOnly();
         cid.commit(commitment);
@@ -441,6 +454,24 @@ contract CyberIdTest is Test {
         vm.expectEmit(true, true, true, true);
         emit Transfer(aliceAddress, bobAddress, tokenId);
         cid.safeTransferFrom(aliceAddress, bobAddress, tokenId, "");
+    }
+
+    function test_NotRegistered_TransferFrom_RevertInvalidToken() public {
+        uint256 tokenId = cid.getTokenId("alice");
+        vm.expectRevert("ERC721: invalid token ID");
+        cid.transferFrom(aliceAddress, bobAddress, tokenId);
+    }
+
+    function test_Registered_TransferFrom_Success() public {
+        cid.disableTrustedOnly();
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
+
+        uint256 tokenId = cid.getTokenId("alice");
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(aliceAddress, bobAddress, tokenId);
+        cid.transferFrom(aliceAddress, bobAddress, tokenId);
     }
 
     function test_BaseUriNotSet_TokenUri_Success() public {
