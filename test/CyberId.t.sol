@@ -599,6 +599,15 @@ contract CyberIdTest is Test {
         cid.setMetadata(tokenId, avatarKey, avatarValue);
     }
 
+    function test_NameNotRegistered_SetMetadata_RevertInvalidToken() public {
+        uint256 tokenId = cid.getTokenId("alice");
+        string memory avatarKey = "avatar";
+        string
+            memory avatarValue = "ipfs://Qmb5YRL6hjutLUF2dw5V5WGjQCip4e1WpRo8w3iFss4cWB";
+        vm.expectRevert("ERC721: invalid token ID");
+        cid.setMetadata(tokenId, avatarKey, avatarValue);
+    }
+
     function test_MetadataSet_ClearMetadata_ReadSuccess() public {
         cid.disableTrustedOnly();
         cid.commit(commitment);
