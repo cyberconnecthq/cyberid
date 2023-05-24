@@ -41,7 +41,7 @@ jobs:
         run: yarn run lint:gh-check
 
       - name: Run Coverage
-        run: forge coverage --report lcov
+        run: "forge coverage --report lcov && sudo apt-get install lcov && lcov --remove ./lcov.info -o ./lcov.info.pruned 'test/*' 'script/*' 'src/libraries/*' 'src/deployer/*'"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -50,6 +50,6 @@ jobs:
           directory: .
           env_vars: OS,PYTHON
           fail_ci_if_error: true
-          files: ./lcov.info
+          files: ./lcov.info.pruned
           name: cyberid-coverage
           verbose: true
