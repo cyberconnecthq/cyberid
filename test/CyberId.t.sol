@@ -4,6 +4,7 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 import "../src/core/CyberId.sol";
 import { MockUsdOracle } from "./utils/MockUsdOracle.sol";
+import { MockWallet } from "./utils/MockWallet.sol";
 
 /**
  * @dev All test names follow the pattern of "test_[GIVEN]_[WHEN]_[THEN]"
@@ -14,6 +15,7 @@ contract CyberIdTest is Test {
         address(0x2E0446079705B6Bacc4730fB3EDA5DA68aE5Fe4D);
     address public bobAddress =
         address(0x5617FEC489c0295C565626e45ed77F2265c283C6);
+    address public mockWalletAddress;
     bytes32 public commitment =
         0xeef54eed8da56e808443372ffeab4d7b46043e6db8aa8b3cd9de5f5340ec1f2b;
     bytes32 public secret =
@@ -39,10 +41,13 @@ contract CyberIdTest is Test {
     function setUp() public {
         vm.startPrank(aliceAddress);
         MockUsdOracle usdOracle = new MockUsdOracle();
+        MockWallet mockWallet = new MockWallet();
+        mockWalletAddress = address(mockWallet);
         cid = new CyberId("CYBER ID", "CYBERID", address(usdOracle));
         // set timestamp to startTs
         vm.warp(startTs);
         vm.deal(aliceAddress, startBalance);
+        vm.deal(mockWalletAddress, startBalance);
     }
 
     /* solhint-disable func-name-mixedcase */
@@ -205,6 +210,23 @@ contract CyberIdTest is Test {
         assertEq(address(cid).balance, cost);
     }
 
+    function test_Committed_RegisterToWrongWallet_RevertRefundFail() public {
+        cid.disableTrustedOnly();
+        vm.stopPrank();
+        vm.startPrank(mockWalletAddress);
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        uint256 cost = cid.getPriceWeiAt("alice", 1, 1);
+        vm.expectRevert("REFUND_FAILED");
+        cid.register{ value: cost * 1 wei + 1 ether }(
+            "alice",
+            aliceAddress,
+            1,
+            secret,
+            1
+        );
+    }
+
     function test_Committed_RegisterWithOverPay_Refund() public {
         cid.disableTrustedOnly();
         cid.commit(commitment);
@@ -295,7 +317,7 @@ contract CyberIdTest is Test {
         cid.renew("alice", 1);
     }
 
-    function test_Registered_WithGracePeriodRenew_NameRenewed() public {
+    function test_Registered_WithinGracePeriodRenew_NameRenewed() public {
         cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
@@ -311,6 +333,19 @@ contract CyberIdTest is Test {
         assertEq(cid.expiries(cid.getTokenId("alice")), newExpiry);
         assertEq(aliceAddress.balance, startBalance - registerCost - renewCost);
         assertEq(address(cid).balance, registerCost + renewCost);
+    }
+
+    function test_Registered_RenewWithWrongWallet_RevertRefundFail() public {
+        cid.disableTrustedOnly();
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
+
+        vm.stopPrank();
+        vm.startPrank(mockWalletAddress);
+        vm.warp(startTs + 61 seconds + 365 days + 30 days - 1 seconds);
+        vm.expectRevert("REFUND_FAILED");
+        cid.renew{ value: 1 ether }("alice", 1);
     }
 
     function test_NorRegistered_Bid_RevertNotRegistered() public {
@@ -369,6 +404,23 @@ contract CyberIdTest is Test {
         assertEq(cid.ownerOf(tokenId), bobAddress);
         assertEq(aliceAddress.balance, startBalance - registerCost - bidFee);
         assertEq(address(cid).balance, registerCost + bidFee);
+    }
+
+    function test_NameAfterGracePeriod_BidAtRound0WithWrongWallet_RevertRefundFail()
+        public
+    {
+        cid.disableTrustedOnly();
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
+
+        vm.stopPrank();
+        vm.startPrank(mockWalletAddress);
+        uint256 baseFee = cid.getPriceWei("alice", 1);
+        uint256 bidFee = baseFee + 1000 ether;
+        vm.warp(startTs + 61 seconds + 365 days + 30 days);
+        vm.expectRevert("REFUND_FAILED");
+        cid.bid{ value: bidFee + 1 ether }(bobAddress, "alice");
     }
 
     function test_NameAfterGracePeriod_BidAtRound394_Success() public {

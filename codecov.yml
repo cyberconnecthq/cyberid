@@ -1,5 +1,5 @@
 ignore:
-  - "script/**/*.sol"
-  - "src/libraries/*.sol"
-  - "src/deployer/*.sol"
-  - "test/**/*.sol"
+  - "script"
+  - "src/libraries"
+  - "src/deployer"
+  - "test"
