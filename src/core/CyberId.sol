@@ -2,14 +2,12 @@
 
 pragma solidity 0.8.14;
 
-import { LibString } from "../libraries/LibString.sol";
-
 import { AggregatorV3Interface } from "chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import { FixedPointMathLib } from "solmate/src/utils/FixedPointMathLib.sol";
 import { ERC721 } from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
-import { Strings } from "openzeppelin-contracts/contracts/utils/Strings.sol";
 import { Ownable2Step } from "openzeppelin-contracts/contracts/access/Ownable2Step.sol";
 import { MetadataResolver } from "../base/MetadataResolver.sol";
+import { LibString } from "../libraries/LibString.sol";
 
 contract CyberId is ERC721, Ownable2Step, MetadataResolver {
     using LibString for *;
@@ -508,11 +506,7 @@ contract CyberId is ERC721, Ownable2Step, MetadataResolver {
     ) public view override returns (string memory) {
         return
             string(
-                abi.encodePacked(
-                    baseTokenUri,
-                    Strings.toString(tokenId),
-                    ".json"
-                )
+                abi.encodePacked(baseTokenUri, tokenId.toHexString(), ".json")
             );
     }
 

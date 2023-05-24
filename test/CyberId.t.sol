@@ -554,7 +554,7 @@ contract CyberIdTest is Test {
         uint256 tokenId = cid.getTokenId("alice");
         assertEq(
             cid.tokenURI(tokenId),
-            string(abi.encodePacked(vm.toString(tokenId), ".json"))
+            "0x9c0257114eb9399a2985f8e75dad7600c5d89fe3824ffa99ec1c3eb8bf3b0501.json"
         );
     }
 
@@ -564,7 +564,12 @@ contract CyberIdTest is Test {
         uint256 tokenId = cid.getTokenId("alice");
         assertEq(
             cid.tokenURI(tokenId),
-            string(abi.encodePacked(baseUri, vm.toString(tokenId), ".json"))
+            string(
+                abi.encodePacked(
+                    baseUri,
+                    "0x9c0257114eb9399a2985f8e75dad7600c5d89fe3824ffa99ec1c3eb8bf3b0501.json"
+                )
+            )
         );
     }
 
