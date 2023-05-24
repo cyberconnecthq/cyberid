@@ -1,5 +1,0 @@
-ignore:
-  - "script"
-  - "src/libraries"
-  - "src/deployer"
-  - "test"

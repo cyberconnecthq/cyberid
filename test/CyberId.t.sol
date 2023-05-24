@@ -568,5 +568,72 @@ contract CyberIdTest is Test {
         );
     }
 
+    function test_NameRegistered_SetMetadata_ReadSuccess() public {
+        cid.disableTrustedOnly();
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
+
+        uint256 tokenId = cid.getTokenId("alice");
+        string memory avatarKey = "avatar";
+        string
+            memory avatarValue = "ipfs://Qmb5YRL6hjutLUF2dw5V5WGjQCip4e1WpRo8w3iFss4cWB";
+        cid.setMetadata(tokenId, avatarKey, avatarValue);
+        assertEq(avatarValue, cid.getMetadata(tokenId, avatarKey));
+        cid.setMetadata(tokenId, avatarKey, unicode"中文");
+        assertEq(unicode"中文", cid.getMetadata(tokenId, avatarKey));
+    }
+
+    function test_MetadataSet_ClearMetadata_ReadSuccess() public {
+        cid.disableTrustedOnly();
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
+
+        uint256 tokenId = cid.getTokenId("alice");
+        cid.setMetadata(tokenId, "1", "1");
+        cid.setMetadata(tokenId, "2", "2");
+        assertEq(cid.getMetadata(tokenId, "1"), "1");
+        assertEq(cid.getMetadata(tokenId, "2"), "2");
+        cid.clearRecords(tokenId);
+        assertEq(cid.getMetadata(tokenId, "1"), "");
+        assertEq(cid.getMetadata(tokenId, "2"), "");
+    }
+
+    function test_NameRegistered_SetMetadataByOthers_RevertUnAuth() public {
+        cid.disableTrustedOnly();
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
+
+        uint256 tokenId = cid.getTokenId("alice");
+        string memory avatarKey = "avatar";
+        string
+            memory avatarValue = "ipfs://Qmb5YRL6hjutLUF2dw5V5WGjQCip4e1WpRo8w3iFss4cWB";
+        vm.stopPrank();
+        vm.startPrank(bobAddress);
+        vm.expectRevert("METADATA_UNAUTHORISED");
+        cid.setMetadata(tokenId, avatarKey, avatarValue);
+    }
+
+    function test_MetadataSet_ClearMetadataByOthers_RevertUnAuth() public {
+        cid.disableTrustedOnly();
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
+
+        uint256 tokenId = cid.getTokenId("alice");
+        cid.setMetadata(tokenId, "1", "1");
+        cid.setMetadata(tokenId, "2", "2");
+        assertEq(cid.getMetadata(tokenId, "1"), "1");
+        assertEq(cid.getMetadata(tokenId, "2"), "2");
+        vm.stopPrank();
+        vm.startPrank(bobAddress);
+        vm.expectRevert("METADATA_UNAUTHORISED");
+        cid.clearRecords(tokenId);
+        assertEq(cid.getMetadata(tokenId, "1"), "1");
+        assertEq(cid.getMetadata(tokenId, "2"), "2");
+    }
+
     /* solhint-disable func-name-mixedcase */
 }

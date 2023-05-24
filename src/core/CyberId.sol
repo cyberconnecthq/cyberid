@@ -9,13 +9,14 @@ import { FixedPointMathLib } from "solmate/src/utils/FixedPointMathLib.sol";
 import { ERC721 } from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 import { Strings } from "openzeppelin-contracts/contracts/utils/Strings.sol";
 import { Ownable2Step } from "openzeppelin-contracts/contracts/access/Ownable2Step.sol";
+import { MetadataResolver } from "../base/MetadataResolver.sol";
 
-contract CyberId is ERC721, Ownable2Step {
+contract CyberId is ERC721, Ownable2Step, MetadataResolver {
     using LibString for *;
     using FixedPointMathLib for uint256;
 
     /*//////////////////////////////////////////////////////////////
-                            PUBLIC STORAGE
+                            STORAGE
     //////////////////////////////////////////////////////////////*/
 
     /**
@@ -561,6 +562,12 @@ contract CyberId is ERC721, Ownable2Step {
     /*//////////////////////////////////////////////////////////////
                              INTERNAL LOGIC
     //////////////////////////////////////////////////////////////*/
+
+    function _isMetadataAuthorised(
+        uint256 tokenId
+    ) internal view override returns (bool) {
+        return super._isApprovedOrOwner(msg.sender, tokenId);
+    }
 
     function _valid(string calldata cid) internal pure returns (bool) {
         // check unicode rune count, if rune count is >=3, byte length must be >=3.
