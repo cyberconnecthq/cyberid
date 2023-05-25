@@ -35,7 +35,9 @@ abstract contract MetadataResolver {
      * @notice  Clears all metadata on a token.
      * @param   tokenId  token to clear metadata.
      */
-    function clearRecords(uint256 tokenId) public virtual authorised(tokenId) {
+    function clearMetadatas(
+        uint256 tokenId
+    ) public virtual authorised(tokenId) {
         metadataVersions[tokenId]++;
         emit MetadataVersionChanged(tokenId, metadataVersions[tokenId]);
     }

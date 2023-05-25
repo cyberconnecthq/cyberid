@@ -654,7 +654,7 @@ contract CyberIdTest is Test {
         cid.setMetadata(tokenId, "2", "2");
         assertEq(cid.getMetadata(tokenId, "1"), "1");
         assertEq(cid.getMetadata(tokenId, "2"), "2");
-        cid.clearRecords(tokenId);
+        cid.clearMetadatas(tokenId);
         assertEq(cid.getMetadata(tokenId, "1"), "");
         assertEq(cid.getMetadata(tokenId, "2"), "");
     }
@@ -673,7 +673,7 @@ contract CyberIdTest is Test {
         vm.stopPrank();
         vm.startPrank(bobAddress);
         vm.expectRevert("METADATA_UNAUTHORISED");
-        cid.clearRecords(tokenId);
+        cid.clearMetadatas(tokenId);
         assertEq(cid.getMetadata(tokenId, "1"), "1");
         assertEq(cid.getMetadata(tokenId, "2"), "2");
     }

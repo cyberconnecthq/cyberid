@@ -19,31 +19,27 @@ contract CyberId is ERC721, Ownable2Step, MetadataResolver {
 
     /**
      * @notice Flag that determines if registration can occur through trustedRegister or register
-     * @dev    Occupies slot 0, initialized to true and can only be changed to false.
+     * @dev    Initialized to true and can only be changed to false.
      */
     bool public trustedOnly;
 
     /**
      * @notice Maps each commit to the timestamp at which it was created.
-     * @dev    Occupies slot 1
      */
     mapping(bytes32 => uint256) public timestampOf;
 
     /**
      * @notice ETH/USD Oracle address.
-     * @dev    Occupies slot 2
      */
     AggregatorV3Interface public immutable usdOracle;
 
     /**
      * @notice Token URI prefix.
-     * @dev    Occupies slot 3
      */
     string public baseTokenUri;
 
     /**
      * @notice Maps each uint256 representation of a cid to registration expire time.
-     * @dev    Occupies slot 4
      */
     mapping(uint256 => uint256) public expiries;
 
@@ -272,7 +268,8 @@ contract CyberId is ERC721, Ownable2Step, MetadataResolver {
     /**
      * @notice Renew a name for a duration while it is in the renewable period.
      *
-     * @param cid The the cid to renew
+     * @param cid          The the cid to renew
+     * @param durationYear The duration of the renewal. Unit: year
      */
     function renew(string calldata cid, uint8 durationYear) external payable {
         /* Revert if the cid's tokenId has never been registered */
