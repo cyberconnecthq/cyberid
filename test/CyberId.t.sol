@@ -520,6 +520,36 @@ contract CyberIdTest is Test {
         cid.safeTransferFrom(aliceAddress, bobAddress, tokenId, "");
     }
 
+    function test_NotRegistered_SafeTransferFrom2_RevertInvalidToken() public {
+        uint256 tokenId = cid.getTokenId("alice");
+        vm.expectRevert("ERC721: invalid token ID");
+        cid.safeTransferFrom(aliceAddress, bobAddress, tokenId);
+    }
+
+    function test_Registered_SafeTransferFrom2_Success() public {
+        cid.disableTrustedOnly();
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
+
+        uint256 tokenId = cid.getTokenId("alice");
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(aliceAddress, bobAddress, tokenId);
+        cid.safeTransferFrom(aliceAddress, bobAddress, tokenId);
+    }
+
+    function test_NameExpired_SafeTransferFrom2_RevertExpired() public {
+        cid.disableTrustedOnly();
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
+
+        vm.warp(startTs + 61 seconds + 365 days);
+        uint256 tokenId = cid.getTokenId("alice");
+        vm.expectRevert("EXPIRED");
+        cid.safeTransferFrom(aliceAddress, bobAddress, tokenId);
+    }
+
     function test_NotRegistered_TransferFrom_RevertInvalidToken() public {
         uint256 tokenId = cid.getTokenId("alice");
         vm.expectRevert("ERC721: invalid token ID");

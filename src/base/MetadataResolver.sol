@@ -41,7 +41,7 @@ abstract contract MetadataResolver {
     }
 
     /**
-     * Sets the metadata associated with an token and key.
+     * @notice Sets the metadata associated with an token and key.
      * May only be called by the owner of that node.
      * @param tokenId The token to update.
      * @param key The key to set.
@@ -57,7 +57,7 @@ abstract contract MetadataResolver {
     }
 
     /**
-     * Returns the metadata associated with an token and key.
+     * @notice Returns the metadata associated with an token and key.
      * @param tokenId The token to query.
      * @param key The metadata key to query.
      * @return The associated metadata.
