@@ -2,6 +2,8 @@
 
 pragma solidity 0.8.14;
 
+import { DataTypes } from "../libraries/DataTypes.sol";
+
 abstract contract MetadataResolver {
     /*//////////////////////////////////////////////////////////////
                             STORAGE
@@ -38,24 +40,25 @@ abstract contract MetadataResolver {
     function clearMetadatas(
         uint256 tokenId
     ) public virtual authorised(tokenId) {
-        metadataVersions[tokenId]++;
-        emit MetadataVersionChanged(tokenId, metadataVersions[tokenId]);
+        _clearMetadatas(tokenId);
     }
 
     /**
-     * @notice Sets the metadata associated with an token and key.
-     * May only be called by the owner of that node.
+     * @notice Sets the metadatas associated with an token and keys.
+     * Only can be called by the owner or approved operators of that node.
      * @param tokenId The token to update.
-     * @param key The key to set.
-     * @param value The metadata value to set.
+     * @param pairs The kv pairs to set.
      */
-    function setMetadata(
+    function batchSetMetadatas(
         uint256 tokenId,
-        string calldata key,
-        string calldata value
+        DataTypes.MetadataPair[] calldata pairs
     ) external authorised(tokenId) {
-        _metadatas[metadataVersions[tokenId]][tokenId][key] = value;
-        emit MetadataChanged(tokenId, key, value);
+        for (uint256 i = 0; i < pairs.length; i++) {
+            DataTypes.MetadataPair memory pair = pairs[i];
+            _metadatas[metadataVersions[tokenId]][tokenId][pair.key] = pair
+                .value;
+            emit MetadataChanged(tokenId, pair.key, pair.value);
+        }
     }
 
     /**
@@ -78,4 +81,13 @@ abstract contract MetadataResolver {
     function _isMetadataAuthorised(
         uint256 tokenId
     ) internal view virtual returns (bool);
+
+    /**
+     * @notice  Clears all metadata on a token.
+     * @param   tokenId  token to clear metadata.
+     */
+    function _clearMetadatas(uint256 tokenId) internal virtual {
+        metadataVersions[tokenId]++;
+        emit MetadataVersionChanged(tokenId, metadataVersions[tokenId]);
+    }
 }

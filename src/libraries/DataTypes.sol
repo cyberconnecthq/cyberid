@@ -9,4 +9,9 @@ library DataTypes {
         bytes32 s;
         uint256 deadline;
     }
+
+    struct MetadataPair {
+        string key;
+        string value;
+    }
 }

@@ -1,10 +1,12 @@
-// SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+pragma solidity 0.8.14;
 
 import "forge-std/Test.sol";
 import "../src/core/CyberId.sol";
 import { MockUsdOracle } from "./utils/MockUsdOracle.sol";
 import { MockWallet } from "./utils/MockWallet.sol";
+import { DataTypes } from "../src/libraries/DataTypes.sol";
 
 /**
  * @dev All test names follow the pattern of "test_[GIVEN]_[WHEN]_[THEN]"
@@ -613,9 +615,13 @@ contract CyberIdTest is Test {
         string memory avatarKey = "avatar";
         string
             memory avatarValue = "ipfs://Qmb5YRL6hjutLUF2dw5V5WGjQCip4e1WpRo8w3iFss4cWB";
-        cid.setMetadata(tokenId, avatarKey, avatarValue);
+        DataTypes.MetadataPair[]
+            memory metadatas = new DataTypes.MetadataPair[](1);
+        metadatas[0] = DataTypes.MetadataPair(avatarKey, avatarValue);
+        cid.batchSetMetadatas(tokenId, metadatas);
         assertEq(avatarValue, cid.getMetadata(tokenId, avatarKey));
-        cid.setMetadata(tokenId, avatarKey, unicode"中文");
+        metadatas[0] = DataTypes.MetadataPair(avatarKey, unicode"中文");
+        cid.batchSetMetadatas(tokenId, metadatas);
         assertEq(unicode"中文", cid.getMetadata(tokenId, avatarKey));
     }
 
@@ -629,9 +635,12 @@ contract CyberIdTest is Test {
         string memory avatarKey = "avatar";
         string
             memory avatarValue = "ipfs://Qmb5YRL6hjutLUF2dw5V5WGjQCip4e1WpRo8w3iFss4cWB";
+        DataTypes.MetadataPair[]
+            memory metadatas = new DataTypes.MetadataPair[](1);
+        metadatas[0] = DataTypes.MetadataPair(avatarKey, avatarValue);
         vm.warp(startTs + 61 seconds + 365 days);
         vm.expectRevert("EXPIRED");
-        cid.setMetadata(tokenId, avatarKey, avatarValue);
+        cid.batchSetMetadatas(tokenId, metadatas);
     }
 
     function test_NameNotRegistered_SetMetadata_RevertInvalidToken() public {
@@ -639,8 +648,11 @@ contract CyberIdTest is Test {
         string memory avatarKey = "avatar";
         string
             memory avatarValue = "ipfs://Qmb5YRL6hjutLUF2dw5V5WGjQCip4e1WpRo8w3iFss4cWB";
+        DataTypes.MetadataPair[]
+            memory metadatas = new DataTypes.MetadataPair[](1);
+        metadatas[0] = DataTypes.MetadataPair(avatarKey, avatarValue);
         vm.expectRevert("ERC721: invalid token ID");
-        cid.setMetadata(tokenId, avatarKey, avatarValue);
+        cid.batchSetMetadatas(tokenId, metadatas);
     }
 
     function test_MetadataSet_ClearMetadata_ReadSuccess() public {
@@ -650,8 +662,11 @@ contract CyberIdTest is Test {
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
 
         uint256 tokenId = cid.getTokenId("alice");
-        cid.setMetadata(tokenId, "1", "1");
-        cid.setMetadata(tokenId, "2", "2");
+        DataTypes.MetadataPair[]
+            memory metadatas = new DataTypes.MetadataPair[](2);
+        metadatas[0] = DataTypes.MetadataPair("1", "1");
+        metadatas[1] = DataTypes.MetadataPair("2", "2");
+        cid.batchSetMetadatas(tokenId, metadatas);
         assertEq(cid.getMetadata(tokenId, "1"), "1");
         assertEq(cid.getMetadata(tokenId, "2"), "2");
         cid.clearMetadatas(tokenId);
@@ -666,8 +681,11 @@ contract CyberIdTest is Test {
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
 
         uint256 tokenId = cid.getTokenId("alice");
-        cid.setMetadata(tokenId, "1", "1");
-        cid.setMetadata(tokenId, "2", "2");
+        DataTypes.MetadataPair[]
+            memory metadatas = new DataTypes.MetadataPair[](2);
+        metadatas[0] = DataTypes.MetadataPair("1", "1");
+        metadatas[1] = DataTypes.MetadataPair("2", "2");
+        cid.batchSetMetadatas(tokenId, metadatas);
         assertEq(cid.getMetadata(tokenId, "1"), "1");
         assertEq(cid.getMetadata(tokenId, "2"), "2");
         vm.stopPrank();

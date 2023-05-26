@@ -243,8 +243,8 @@ contract MocaId is ERC721, Ownable2Step, MetadataResolver, EIP712 {
     function ownerOf(uint256 tokenId) public view override returns (address) {
         /* Revert if mocaId was registered once and the expiration time has passed */
         uint256 expiryTs = expiries[tokenId];
-        if (expiryTs != 0) {
-            require(block.timestamp < expiryTs, "EXPIRED");
+        if (expiryTs >= block.timestamp) {
+            return address(0);
         }
 
         /* Safety: If the token is unregistered, super.ownerOf will revert */
@@ -315,6 +315,10 @@ contract MocaId is ERC721, Ownable2Step, MetadataResolver, EIP712 {
          */
         bytes32 label = keccak256(bytes(mocaId));
         uint256 tokenId = uint256(label);
+        if (_exists(tokenId)) {
+            _clearMetadatas(tokenId);
+            _burn(tokenId);
+        }
         super._safeMint(to, tokenId);
 
         /**
