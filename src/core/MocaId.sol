@@ -2,14 +2,23 @@
 
 pragma solidity 0.8.14;
 
-import { ERC721 } from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
-import { Ownable2Step } from "openzeppelin-contracts/contracts/access/Ownable2Step.sol";
+import { Ownable2StepUpgradeable } from "openzeppelin-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
+import { ERC721Upgradeable } from "openzeppelin-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
+import { UUPSUpgradeable } from "openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
+import { Initializable } from "openzeppelin-upgradeable/contracts/proxy/utils/Initializable.sol";
 import { MetadataResolver } from "../base/MetadataResolver.sol";
 import { EIP712 } from "../base/EIP712.sol";
 import { LibString } from "../libraries/LibString.sol";
 import { DataTypes } from "../libraries/DataTypes.sol";
 
-contract MocaId is ERC721, Ownable2Step, MetadataResolver, EIP712 {
+contract MocaId is
+    Initializable,
+    ERC721Upgradeable,
+    Ownable2StepUpgradeable,
+    UUPSUpgradeable,
+    MetadataResolver,
+    EIP712
+{
     using LibString for *;
 
     /*//////////////////////////////////////////////////////////////
@@ -30,6 +39,12 @@ contract MocaId is ERC721, Ownable2Step, MetadataResolver, EIP712 {
      * @notice Signer that approve meta transactions.
      */
     address internal _signer;
+
+    /**
+     * @dev Added to allow future versions to add new variables in case this contract becomes
+     *      inherited. See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[40] private __gap;
 
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
@@ -54,14 +69,30 @@ contract MocaId is ERC721, Ownable2Step, MetadataResolver, EIP712 {
     event Register(string mocaId, uint256 tokenId, address indexed to);
 
     /*//////////////////////////////////////////////////////////////
-                            CONSTRUCTOR
+                        CONSTRUCTORS AND INITIALIZERS
     //////////////////////////////////////////////////////////////*/
 
-    constructor(
-        string memory _name,
-        string memory _symbol
-    ) ERC721(_name, _symbol) {
-        _signer = msg.sender;
+    /**
+     * @notice Disable initialization to protect the contract
+     */
+    constructor() {
+        _disableInitializers();
+    }
+
+    /**
+     * @notice Initialize default storage values and inherited contracts. This should be called
+     *         once after the contract is deployed via the ERC1967 proxy.
+     *
+     * @param _tokenName   The ERC-721 name of the fname token
+     * @param _tokenSymbol The ERC-721 symbol of the fname token
+     */
+    function initialize(
+        string calldata _tokenName,
+        string calldata _tokenSymbol
+    ) external initializer {
+        /* Initialize inherited contracts */
+        __ERC721_init(_tokenName, _tokenSymbol);
+        __UUPSUpgradeable_init();
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -198,6 +229,9 @@ contract MocaId is ERC721, Ownable2Step, MetadataResolver, EIP712 {
     /*//////////////////////////////////////////////////////////////
                              INTERNAL LOGIC
     //////////////////////////////////////////////////////////////*/
+
+    // solhint-disable-next-line no-empty-blocks
+    function _authorizeUpgrade(address) internal view override onlyOwner {}
 
     function _register(string calldata mocaId, address to) internal {
         require(available(mocaId), "INVALID_NAME");

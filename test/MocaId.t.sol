@@ -4,6 +4,7 @@ pragma solidity 0.8.14;
 
 import "forge-std/Test.sol";
 import "../src/core/MocaId.sol";
+import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 /**
  * @dev All test names follow the pattern of "test_[GIVEN]_[WHEN]_[THEN]"
@@ -23,7 +24,10 @@ contract MocaIdTest is Test {
 
     function setUp() public {
         vm.startPrank(aliceAddress);
-        mid = new MocaId("MOCA ID", "MOCAID");
+        MocaId midImpl = new MocaId();
+        ERC1967Proxy proxy = new ERC1967Proxy(address(midImpl), "");
+        mid = MocaId(address(proxy));
+        mid.initialize("MOCA ID", "MOCAID");
         // set timestamp to startTs
         vm.warp(startTs);
         vm.deal(aliceAddress, startBalance);
