@@ -22,11 +22,6 @@ contract MocaId is ERC721, Ownable2Step, MetadataResolver, EIP712 {
     string public baseTokenUri;
 
     /**
-     * @notice Maps each uint256 representation of a mocaId to registration expire time.
-     */
-    mapping(uint256 => uint256) public expiries;
-
-    /**
      * @notice User nonces that prevents signature replay.
      */
     mapping(address => uint256) public nonces;
@@ -40,16 +35,9 @@ contract MocaId is ERC721, Ownable2Step, MetadataResolver, EIP712 {
                                 CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    uint256 public constant GRACE_PERIOD = 30 days;
-
     bytes32 internal constant _REGISTER_TYPEHASH =
         keccak256(
-            "register(string mocaId,address to,uint256 duration,uint256 nonce,uint256 deadline)"
-        );
-
-    bytes32 internal constant _RENEW_TYPEHASH =
-        keccak256(
-            "renew(string mocaId,uint256 duration,uint256 nonce,uint256 deadline)"
+            "register(string mocaId,address to,uint256 nonce,uint256 deadline)"
         );
 
     /*//////////////////////////////////////////////////////////////
@@ -59,19 +47,11 @@ contract MocaId is ERC721, Ownable2Step, MetadataResolver, EIP712 {
     /**
      * @dev Emit an event when a mocaId is registered.
      *
-     * @param mocaId The mocaId
-     * @param to     The address that owns the mocaId
-     * @param expiry The timestamp at which the registration expires
+     * @param mocaId  The mocaId
+     * @param tokenId The tokenId of the mocaId
+     * @param to      The address that owns the mocaId
      */
-    event Register(string mocaId, address indexed to, uint256 expiry);
-
-    /**
-     * @dev Emit an event when a mocaId is renewed.
-     *
-     * @param mocaId    The mocaId
-     * @param expiry The timestamp at which the renewal expires
-     */
-    event Renew(string mocaId, uint256 expiry);
+    event Register(string mocaId, uint256 tokenId, address indexed to);
 
     /*//////////////////////////////////////////////////////////////
                             CONSTRUCTOR
@@ -107,9 +87,8 @@ contract MocaId is ERC721, Ownable2Step, MetadataResolver, EIP712 {
      */
     function available(string calldata mocaId) public view returns (bool) {
         bytes32 label = keccak256(bytes(mocaId));
-        return
-            _valid(mocaId) &&
-            expiries[uint256(label)] + GRACE_PERIOD < block.timestamp;
+        uint256 tokenId = uint256(label);
+        return _valid(mocaId) && !super._exists(tokenId);
     }
 
     /**
@@ -117,13 +96,11 @@ contract MocaId is ERC721, Ownable2Step, MetadataResolver, EIP712 {
      *
      * @param mocaId    The mocaId to register
      * @param to        The address that will own the mocaId
-     * @param duration  The duration of the registration
      * @param signature The signature signed by signer
      */
     function register(
         string calldata mocaId,
         address to,
-        uint256 duration,
         bytes calldata signature
     ) external {
         DataTypes.EIP712Signature memory sig;
@@ -140,7 +117,6 @@ contract MocaId is ERC721, Ownable2Step, MetadataResolver, EIP712 {
                         _REGISTER_TYPEHASH,
                         mocaId,
                         to,
-                        duration,
                         nonces[to]++,
                         sig.deadline
                     )
@@ -153,7 +129,7 @@ contract MocaId is ERC721, Ownable2Step, MetadataResolver, EIP712 {
             sig.deadline
         );
 
-        _register(mocaId, to, duration);
+        _register(mocaId, to);
     }
 
     /**
@@ -161,95 +137,17 @@ contract MocaId is ERC721, Ownable2Step, MetadataResolver, EIP712 {
      *
      * @param mocaId   The mocaId to register
      * @param to       The address that will own the mocaId
-     * @param duration The duration of the registration
      */
     function trustedRegister(
         string calldata mocaId,
-        address to,
-        uint256 duration
+        address to
     ) external onlySigner {
-        _register(mocaId, to, duration);
-    }
-
-    /**
-     * @notice Renews a mocaId for a duration while it is in the renewable period.
-     *
-     * @param mocaId    The the mocaId to renew
-     * @param duration  The duration of the renewal
-     * @param signature The signature signed by signer
-     */
-    function renew(
-        string calldata mocaId,
-        uint256 duration,
-        bytes calldata signature
-    ) external {
-        DataTypes.EIP712Signature memory sig;
-
-        (sig.v, sig.r, sig.s, sig.deadline) = abi.decode(
-            signature,
-            (uint8, bytes32, bytes32, uint256)
-        );
-
-        bytes32 label = keccak256(bytes(mocaId));
-        uint256 tokenId = uint256(label);
-        address tokenOwner = super.ownerOf(tokenId);
-
-        _requiresExpectedSigner(
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        _RENEW_TYPEHASH,
-                        mocaId,
-                        duration,
-                        nonces[tokenOwner]++,
-                        sig.deadline
-                    )
-                )
-            ),
-            _signer,
-            sig.v,
-            sig.r,
-            sig.s,
-            sig.deadline
-        );
-
-        _renew(mocaId, tokenId, duration);
-    }
-
-    /**
-     * @notice Renews a mocaId for a duration while it is in the renewable period by trusted caller..
-     *
-     * @param mocaId   The the mocaId to renew
-     * @param duration The duration of the renewal
-     */
-    function trustedRenew(
-        string calldata mocaId,
-        uint256 duration
-    ) external onlySigner {
-        bytes32 label = keccak256(bytes(mocaId));
-        uint256 tokenId = uint256(label);
-        _renew(mocaId, tokenId, duration);
+        _register(mocaId, to);
     }
 
     /*//////////////////////////////////////////////////////////////
                             ERC-721 OVERRIDES
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Override the ownerOf implementation to throw if a mocaId is renewable or biddable.
-     *
-     * @param tokenId The uint256 tokenId of the mocaId
-     */
-    function ownerOf(uint256 tokenId) public view override returns (address) {
-        /* Revert if mocaId was registered once and the expiration time has passed */
-        uint256 expiryTs = expiries[tokenId];
-        if (expiryTs >= block.timestamp) {
-            return address(0);
-        }
-
-        /* Safety: If the token is unregistered, super.ownerOf will revert */
-        return super.ownerOf(tokenId);
-    }
 
     function _transfer(address, address, uint256) internal pure override {
         revert("TRANSFER_NOT_ALLOWED");
@@ -301,11 +199,7 @@ contract MocaId is ERC721, Ownable2Step, MetadataResolver, EIP712 {
                              INTERNAL LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function _register(
-        string calldata mocaId,
-        address to,
-        uint256 duration
-    ) internal {
+    function _register(string calldata mocaId, address to) internal {
         require(available(mocaId), "INVALID_NAME");
 
         /**
@@ -315,44 +209,9 @@ contract MocaId is ERC721, Ownable2Step, MetadataResolver, EIP712 {
          */
         bytes32 label = keccak256(bytes(mocaId));
         uint256 tokenId = uint256(label);
-        if (_exists(tokenId)) {
-            _clearMetadatas(tokenId);
-            _burn(tokenId);
-        }
         super._safeMint(to, tokenId);
 
-        /**
-         * Set the expiration timestamp
-         */
-        unchecked {
-            expiries[tokenId] = block.timestamp + duration;
-        }
-
-        emit Register(mocaId, to, expiries[tokenId]);
-    }
-
-    function _renew(
-        string memory mocaId,
-        uint256 tokenId,
-        uint256 duration
-    ) internal {
-        /* Revert if the mocaId's tokenId has never been registered */
-        uint256 expiryTs = expiries[tokenId];
-        require(expiryTs > 0, "NOT_REGISTERED");
-
-        /**
-         * Revert if the mocaId has passed out of the renewable period.
-         */
-        unchecked {
-            require(block.timestamp < expiryTs + GRACE_PERIOD, "NOT_RENEWABLE");
-        }
-
-        /**
-         * Renew the name by setting the new expiration timestamp
-         */
-        expiries[tokenId] += duration;
-
-        emit Renew(mocaId, expiries[tokenId]);
+        emit Register(mocaId, tokenId, to);
     }
 
     function _domainSeparatorName()
@@ -367,11 +226,6 @@ contract MocaId is ERC721, Ownable2Step, MetadataResolver, EIP712 {
     function _isMetadataAuthorised(
         uint256 tokenId
     ) internal view override returns (bool) {
-        /* Revert if mocaId was registered once and the expiration time has passed */
-        uint256 expiryTs = expiries[tokenId];
-        if (expiryTs != 0) {
-            require(block.timestamp < expiryTs, "EXPIRED");
-        }
         return super._isApprovedOrOwner(msg.sender, tokenId);
     }
 
