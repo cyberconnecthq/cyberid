@@ -17,6 +17,15 @@ contract DeployerCreate2Deployer is Script, DeploySetting {
                 msg.sender == 0x7B23B874cD857C5968434F95674165a36CfD5E4e,
                 "address must be deployer"
             );
+        } else if (block.chainid == DeploySetting.MUMBAI) {
+            require(nonce == 0, "nonce must be 0");
+            console.log("deployer", msg.sender);
+            require(
+                msg.sender == 0x7B23B874cD857C5968434F95674165a36CfD5E4e,
+                "address must be deployer"
+            );
+        } else {
+            revert("PARAMS_NOT_SET");
         }
 
         vm.startBroadcast();

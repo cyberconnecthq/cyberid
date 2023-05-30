@@ -12,6 +12,8 @@ contract DeploySetting {
 
     uint256 internal constant BASE_GOERLI = 84531;
 
+    uint256 internal constant MUMBAI = 80001;
+
     function _setDeployParams() internal {
         if (block.chainid == BASE_GOERLI) {
             deployParams.deployerContract = address(
@@ -19,6 +21,10 @@ contract DeploySetting {
             );
             deployParams.usdOracle = address(
                 0xcD2A119bD1F7DF95d706DE6F2057fDD45A0503E2
+            );
+        } else if (block.chainid == MUMBAI) {
+            deployParams.deployerContract = address(
+                0x277c467cB75175E8a2821FAB1054dC3745C19bA4
             );
         } else {
             revert("PARAMS_NOT_SET");

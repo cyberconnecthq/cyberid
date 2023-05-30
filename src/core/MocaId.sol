@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.14;
 
-import { Ownable2StepUpgradeable } from "openzeppelin-upgradeable/contracts/access/Ownable2StepUpgradeable.sol";
+import { OwnableUpgradeable } from "openzeppelin-upgradeable/contracts/access/OwnableUpgradeable.sol";
 import { ERC721Upgradeable } from "openzeppelin-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
 import { UUPSUpgradeable } from "openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { Initializable } from "openzeppelin-upgradeable/contracts/proxy/utils/Initializable.sol";
@@ -14,7 +14,7 @@ import { DataTypes } from "../libraries/DataTypes.sol";
 contract MocaId is
     Initializable,
     ERC721Upgradeable,
-    Ownable2StepUpgradeable,
+    OwnableUpgradeable,
     UUPSUpgradeable,
     MetadataResolver
 {
@@ -73,11 +73,13 @@ contract MocaId is
      */
     function initialize(
         string calldata _tokenName,
-        string calldata _tokenSymbol
+        string calldata _tokenSymbol,
+        address _owner
     ) external initializer {
         /* Initialize inherited contracts */
         __ERC721_init(_tokenName, _tokenSymbol);
         __UUPSUpgradeable_init();
+        _transferOwnership(_owner);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -114,19 +116,13 @@ contract MocaId is
         bytes calldata postData
     ) external {
         if (_middleware != address(0)) {
-            IMiddleware(_middleware).preProcess(
-                DataTypes.RegisterNameParams(mocaId, to),
-                preData
-            );
-        }
-
-        _register(mocaId, to);
-
-        if (_middleware != address(0)) {
-            IMiddleware(_middleware).postProcess(
-                DataTypes.RegisterNameParams(mocaId, to),
-                postData
-            );
+            DataTypes.RegisterNameParams memory params = DataTypes
+                .RegisterNameParams(msg.sender, mocaId, to);
+            IMiddleware(_middleware).preProcess(params, preData);
+            _register(mocaId, to);
+            IMiddleware(_middleware).postProcess(params, postData);
+        } else {
+            _register(mocaId, to);
         }
     }
 
@@ -146,10 +142,8 @@ contract MocaId is
     function tokenURI(
         uint256 tokenId
     ) public view override returns (string memory) {
-        return
-            string(
-                abi.encodePacked(baseTokenUri, tokenId.toHexString(), ".json")
-            );
+        require(_exists(tokenId), "INVALID_TOKEN_ID");
+        return string(abi.encodePacked(baseTokenUri, tokenId.toHexString()));
     }
 
     /*//////////////////////////////////////////////////////////////

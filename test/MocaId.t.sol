@@ -27,7 +27,7 @@ contract MocaIdTest is Test {
         MocaId midImpl = new MocaId();
         ERC1967Proxy proxy = new ERC1967Proxy(address(midImpl), "");
         mid = MocaId(address(proxy));
-        mid.initialize("MOCA ID", "MOCAID");
+        mid.initialize("MOCA ID", "MOCAID", aliceAddress);
         // set timestamp to startTs
         vm.warp(startTs);
         vm.deal(aliceAddress, startBalance);

@@ -3,14 +3,21 @@
 pragma solidity 0.8.14;
 
 import { DataTypes } from "../libraries/DataTypes.sol";
+import { Initializable } from "openzeppelin-upgradeable/contracts/proxy/utils/Initializable.sol";
 
-abstract contract MetadataResolver {
+abstract contract MetadataResolver is Initializable {
     /*//////////////////////////////////////////////////////////////
                             STORAGE
     //////////////////////////////////////////////////////////////*/
 
     mapping(uint64 => mapping(uint256 => mapping(string => string))) _metadatas;
     mapping(uint256 => uint64) public metadataVersions;
+
+    /**
+     * @dev Added to allow future versions to add new variables in case this contract becomes
+     *      inherited. See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
+     */
+    uint256[40] private __gap;
 
     /*//////////////////////////////////////////////////////////////
                             EVENTS

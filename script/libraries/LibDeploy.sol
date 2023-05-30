@@ -5,13 +5,16 @@ pragma solidity 0.8.14;
 import "forge-std/Vm.sol";
 
 import { CyberId } from "../../src/core/CyberId.sol";
+import { MocaId } from "../../src/core/MocaId.sol";
 import { DeploySetting } from "./DeploySetting.sol";
 import { LibString } from "../../src/libraries/LibString.sol";
 import { Create2Deployer } from "../../src/deployer/Create2Deployer.sol";
+import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { PermissionMw } from "../../src/middlewares/PermissionMw.sol";
 
 library LibDeploy {
     // create2 deploy all contract with this protocol salt
-    bytes32 constant SALT = keccak256(bytes("CyberId2"));
+    bytes32 constant SALT = keccak256(bytes("CyberId"));
 
     string internal constant OUTPUT_FILE = "docs/deploy/";
 
@@ -20,6 +23,7 @@ library LibDeploy {
         string memory chainName;
         if (chainId == 1) chainName = "mainnet";
         else if (chainId == 84531) chainName = "base_goerli";
+        else if (chainId == 80001) chainName = "mumbai";
         else chainName = "unknown";
         return
             string(
@@ -83,5 +87,33 @@ library LibDeploy {
         );
 
         _write(vm, "CyberId", cyberId);
+    }
+
+    function deployMocaId(
+        Vm vm,
+        DeploySetting.DeployParameters memory params
+    ) internal {
+        Create2Deployer dc = Create2Deployer(params.deployerContract);
+        address mocaIdImpl = address(new MocaId());
+
+        _write(vm, "MocaId(Impl)", mocaIdImpl);
+
+        address mocaIdProxy = dc.deploy(
+            abi.encodePacked(
+                type(ERC1967Proxy).creationCode,
+                abi.encode(mocaIdImpl, "")
+            ),
+            SALT
+        );
+
+        MocaId(mocaIdProxy).initialize("MOCA ID", "MOCAID", msg.sender);
+
+        _write(vm, "MocaId(Proxy)", mocaIdProxy);
+
+        address permissionMw = address(new PermissionMw(mocaIdProxy));
+
+        MocaId(mocaIdProxy).setMiddleware(permissionMw, abi.encode(msg.sender));
+
+        _write(vm, "PermissionMw", permissionMw);
     }
 }

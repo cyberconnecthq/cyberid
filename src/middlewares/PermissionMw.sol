@@ -14,7 +14,7 @@ contract PermissionMw is IMiddleware, EIP712 {
     /**
      * @notice Signer that approve meta transactions.
      */
-    address public _signer;
+    address public signer;
 
     /**
      * @notice User nonces that prevents signature replay.
@@ -59,7 +59,7 @@ contract PermissionMw is IMiddleware, EIP712 {
 
     /// @inheritdoc IMiddleware
     function setMwData(bytes calldata data) external override onlyNameRegistry {
-        _signer = abi.decode(data, (address));
+        signer = abi.decode(data, (address));
     }
 
     /// @inheritdoc IMiddleware
@@ -86,7 +86,7 @@ contract PermissionMw is IMiddleware, EIP712 {
                     )
                 )
             ),
-            _signer,
+            signer,
             sig.v,
             sig.r,
             sig.s,

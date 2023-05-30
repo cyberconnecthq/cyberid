@@ -16,6 +16,7 @@ library DataTypes {
     }
 
     struct RegisterNameParams {
+        address msgSender;
         string name;
         address to;
     }
