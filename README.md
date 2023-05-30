@@ -4,7 +4,7 @@
 
 Id smart contracts for CyberConnect ecosystem. The repo consists of 2 top-level and core smart contracts:
 
-- `CyberId` - the main contract that manages the `.cyber` handle of a user
+- `CyberId` - the contract that manages the `.cyber` handle of a user
 - `MocaId` - the contract that manages the `.moca` handle of a user
 
 ## Table of Contents
@@ -57,7 +57,7 @@ Each `MocaId` has a metadata map attached to it. The metadata map can be set wit
 - `clearMetadatas` - clears all metadata kv pairs without knowing keys
 - `getMetadata` - gets a single metadata kv pair
 
-When a `MocaId` moves from `registerable` to `registered`, `clearMetadatas` is performed for users.
+When a `MocaId` moves from `registered` to `registerable`, `clearMetadatas` is performed for users.
 
 ### Middleware
 
@@ -113,7 +113,7 @@ We use [Create2Deployer](./src/deployer/Create2Deployer.sol) to ensure proxy con
 
 1. Prepare a brand new EOA for deployment because the nonce of the EOA will influence the deployer address. The nonce should be 0 across chains.
 
-2. Prepare `.env.mumbai`. The `ETHERSCAN_API_KEY` can be obtained from [here](https://docs.polygonscan.com/v/mumbai-polygonscan/)
+2. Prepare `.env.mumbai` at the repo root directory. The `ETHERSCAN_API_KEY` for mumbai can be obtained from [here](https://docs.polygonscan.com/v/mumbai-polygonscan/).
 
    ```bash
    RPC_URL=<mumbai RPC>
@@ -130,3 +130,5 @@ We use [Create2Deployer](./src/deployer/Create2Deployer.sol) to ensure proxy con
 5. Deploy `MocaId`
 
    `yarn deploy_mocaid:mumbai`
+
+Finally, you can write your yarn entry points in [package.json] to customize and repeat your deployment process.

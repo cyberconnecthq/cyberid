@@ -14,13 +14,6 @@ import { TestLib712 } from "../utils/TestLib712.sol";
 contract MocaIdPermissionMwTest is MocaIdTestBase {
     address public mw;
 
-    event Register(string mocaId, uint256 indexed tokenId, address indexed to);
-    event Transfer(
-        address indexed from,
-        address indexed to,
-        uint256 indexed tokenId
-    );
-
     function setUp() public override {
         super.setUp();
         PermissionMw permissionMw = new PermissionMw(address(mid));

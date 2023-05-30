@@ -16,6 +16,13 @@ abstract contract MocaIdTestBase is Test {
     uint256 public startTs = 1684747530;
     uint256 public startBalance = 2000 ether;
 
+    event Register(string mocaId, uint256 indexed tokenId, address indexed to);
+    event Transfer(
+        address indexed from,
+        address indexed to,
+        uint256 indexed tokenId
+    );
+
     function setUp() public virtual {
         vm.startPrank(aliceAddress);
         MocaId midImpl = new MocaId();

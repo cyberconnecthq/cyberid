@@ -32,7 +32,17 @@ contract MocaId is
     /**
      * @notice Middleware contract that processes before and after the registration.
      */
-    address internal _middleware;
+    address public middleware;
+
+    /**
+     * @notice The number of mocaIds minted.
+     */
+    uint256 internal _mintCount;
+
+    /**
+     * @notice The number of mocaIds burned.
+     */
+    uint256 internal _burnCount;
 
     /**
      * @dev Added to allow future versions to add new variables in case this contract becomes
@@ -95,8 +105,8 @@ contract MocaId is
         bytes32 label = keccak256(bytes(mocaId));
         uint256 tokenId = uint256(label);
         if (!_exists(tokenId)) {
-            if (_middleware != address(0)) {
-                return IMiddleware(_middleware).namePatternValid(mocaId);
+            if (middleware != address(0)) {
+                return IMiddleware(middleware).namePatternValid(mocaId);
             } else {
                 return true;
             }
@@ -118,15 +128,30 @@ contract MocaId is
         bytes calldata preData,
         bytes calldata postData
     ) external {
-        if (_middleware != address(0)) {
+        if (middleware != address(0)) {
             DataTypes.RegisterNameParams memory params = DataTypes
                 .RegisterNameParams(msg.sender, mocaId, to);
-            IMiddleware(_middleware).preProcess(params, preData);
+            IMiddleware(middleware).preProcess(params, preData);
             _register(mocaId, to);
-            IMiddleware(_middleware).postProcess(params, postData);
+            IMiddleware(middleware).postProcess(params, postData);
         } else {
             _register(mocaId, to);
         }
+    }
+
+    /**
+     * @notice Burns a token.
+     *
+     * @param tokenId The token ID to burn.
+     */
+    function burn(uint256 tokenId) external {
+        require(
+            _isApprovedOrOwner(msg.sender, tokenId),
+            "ERC721: caller is not token owner or approved"
+        );
+        _clearMetadatas(tokenId);
+        super._burn(tokenId);
+        _burnCount++;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -135,6 +160,11 @@ contract MocaId is
 
     function _transfer(address, address, uint256) internal pure override {
         revert("TRANSFER_NOT_ALLOWED");
+    }
+
+    function _mint(address to, uint256 tokenId) internal override {
+        super._mint(to, tokenId);
+        ++_mintCount;
     }
 
     /**
@@ -150,13 +180,40 @@ contract MocaId is
     }
 
     /*//////////////////////////////////////////////////////////////
-                            PUBLIC VIEW
+                            EXTERNAL VIEW
     //////////////////////////////////////////////////////////////*/
 
     function getTokenId(
         string calldata mocaId
     ) external pure returns (uint256) {
         return uint256(keccak256(bytes(mocaId)));
+    }
+
+    /**
+     * @notice Gets total number of tokens in existence, burned tokens will reduce the count.
+     *
+     * @return uint256 The total supply.
+     */
+    function totalSupply() external view virtual returns (uint256) {
+        return _mintCount - _burnCount;
+    }
+
+    /**
+     * @notice Gets the total number of minted tokens.
+     *
+     * @return uint256 The total minted tokens.
+     */
+    function totalMinted() external view virtual returns (uint256) {
+        return _mintCount;
+    }
+
+    /**
+     * @notice Gets the total number of burned tokens.
+     *
+     * @return uint256 The total burned tokens.
+     */
+    function totalBurned() external view virtual returns (uint256) {
+        return _burnCount;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -174,12 +231,12 @@ contract MocaId is
      * @notice Set the middleware and data.
      */
     function setMiddleware(
-        address middleware,
+        address _middleware,
         bytes calldata data
     ) external onlyOwner {
-        _middleware = middleware;
-        if (_middleware != address(0)) {
-            IMiddleware(_middleware).setMwData(data);
+        middleware = _middleware;
+        if (middleware != address(0)) {
+            IMiddleware(middleware).setMwData(data);
         }
     }
 
