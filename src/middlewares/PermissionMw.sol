@@ -71,7 +71,7 @@ contract PermissionMw is IMiddleware, EIP712 {
                 keccak256(
                     abi.encode(
                         Constants._REGISTER_TYPEHASH,
-                        params.name,
+                        keccak256(bytes(params.name)),
                         params.to,
                         nonces[params.to]++,
                         sig.deadline

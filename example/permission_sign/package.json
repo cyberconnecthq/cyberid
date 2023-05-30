@@ -1,0 +1,15 @@
+{
+  "name": "permission_sign",
+  "version": "1.0.0",
+  "repository": "git@github.com:cyberconnecthq/cyberid.git",
+  "author": "peng.deng@cyberconnect.me",
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "eth-sig-util": "^3.0.1",
+    "web3": "^1.10.0"
+  },
+  "scripts": {
+    "start": "node permission_mw_sign.js"
+  }
+}

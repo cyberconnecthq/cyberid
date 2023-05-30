@@ -4,6 +4,7 @@ import * as path from "path";
 const writeAbi = async () => {
   const folders = [
     "CyberId.sol/CyberId.json",
+    "MocaId.sol/MocaId.json",
   ];
   const ps = folders.map(async (file) => {
     const f = await fs.readFile(path.join("./out", file), "utf8");

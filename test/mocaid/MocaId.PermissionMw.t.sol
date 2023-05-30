@@ -58,7 +58,7 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
             keccak256(
                 abi.encode(
                     Constants._REGISTER_TYPEHASH,
-                    name,
+                    keccak256(bytes(name)),
                     aliceAddress,
                     0,
                     deadline
@@ -86,7 +86,7 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
             keccak256(
                 abi.encode(
                     Constants._REGISTER_TYPEHASH,
-                    name,
+                    keccak256(bytes(name)),
                     aliceAddress,
                     0,
                     deadline
@@ -112,7 +112,7 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
             keccak256(
                 abi.encode(
                     Constants._REGISTER_TYPEHASH,
-                    name,
+                    keccak256(bytes(name)),
                     aliceAddress,
                     0,
                     deadline
@@ -137,7 +137,7 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
             keccak256(
                 abi.encode(
                     Constants._REGISTER_TYPEHASH,
-                    name,
+                    keccak256(bytes(name)),
                     aliceAddress,
                     0,
                     deadline
@@ -162,7 +162,7 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
             keccak256(
                 abi.encode(
                     Constants._REGISTER_TYPEHASH,
-                    name,
+                    keccak256(bytes(name)),
                     bobAddress,
                     0,
                     deadline
@@ -187,7 +187,7 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
             keccak256(
                 abi.encode(
                     Constants._REGISTER_TYPEHASH,
-                    "test2",
+                    keccak256(bytes("test2")),
                     aliceAddress,
                     0,
                     deadline
@@ -212,7 +212,7 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
             keccak256(
                 abi.encode(
                     Constants._REGISTER_TYPEHASH,
-                    "test",
+                    keccak256(bytes(name)),
                     aliceAddress,
                     1,
                     deadline
