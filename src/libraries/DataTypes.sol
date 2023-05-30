@@ -14,4 +14,9 @@ library DataTypes {
         string key;
         string value;
     }
+
+    struct RegisterNameParams {
+        string name;
+        address to;
+    }
 }

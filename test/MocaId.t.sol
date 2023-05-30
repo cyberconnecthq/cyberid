@@ -34,27 +34,6 @@ contract MocaIdTest is Test {
     }
 
     /* solhint-disable func-name-mixedcase */
-    function test_NameNotRegistered_CheckNameAvailable_Available() public {
-        assertTrue(mid.available(unicode"alice"));
-        assertTrue(mid.available(unicode"bob"));
-        assertTrue(mid.available(unicode"bobb"));
-        assertTrue(mid.available(unicode"三个字"));
-        assertTrue(mid.available(unicode"四个字儿"));
-        assertTrue(mid.available(unicode"😋😋😋"));
-        assertTrue(mid.available(unicode"😋😋😋😋"));
-        assertTrue(mid.available(unicode"    "));
-    }
-
-    function test_NameNotRegistered_CheckNameAvailable_NotAvailable() public {
-        assertFalse(mid.available(unicode""));
-        assertFalse(mid.available(unicode"bo"));
-        assertFalse(mid.available(unicode"二字"));
-        assertFalse(mid.available(unicode"😋😋"));
-        assertFalse(mid.available("zerowidthcharacter\u200a\u200b"));
-        assertFalse(mid.available("zerowidthcharacter\u200a\u200c"));
-        assertFalse(mid.available("zerowidthcharacter\u200a\u200d"));
-        assertFalse(mid.available("zerowidthcharacter\ufefe\ufeff"));
-    }
 
     /* solhint-disable func-name-mixedcase */
 }

@@ -6,8 +6,8 @@ import { Ownable2StepUpgradeable } from "openzeppelin-upgradeable/contracts/acce
 import { ERC721Upgradeable } from "openzeppelin-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
 import { UUPSUpgradeable } from "openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { Initializable } from "openzeppelin-upgradeable/contracts/proxy/utils/Initializable.sol";
+import { IMiddleware } from "../interfaces/IMiddleware.sol";
 import { MetadataResolver } from "../base/MetadataResolver.sol";
-import { EIP712 } from "../base/EIP712.sol";
 import { LibString } from "../libraries/LibString.sol";
 import { DataTypes } from "../libraries/DataTypes.sol";
 
@@ -16,8 +16,7 @@ contract MocaId is
     ERC721Upgradeable,
     Ownable2StepUpgradeable,
     UUPSUpgradeable,
-    MetadataResolver,
-    EIP712
+    MetadataResolver
 {
     using LibString for *;
 
@@ -31,29 +30,15 @@ contract MocaId is
     string public baseTokenUri;
 
     /**
-     * @notice User nonces that prevents signature replay.
+     * @notice Middleware contract that processes before and after the registration.
      */
-    mapping(address => uint256) public nonces;
-
-    /**
-     * @notice Signer that approve meta transactions.
-     */
-    address internal _signer;
+    address internal _middleware;
 
     /**
      * @dev Added to allow future versions to add new variables in case this contract becomes
      *      inherited. See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
      */
     uint256[40] private __gap;
-
-    /*//////////////////////////////////////////////////////////////
-                                CONSTANTS
-    //////////////////////////////////////////////////////////////*/
-
-    bytes32 internal constant _REGISTER_TYPEHASH =
-        keccak256(
-            "register(string mocaId,address to,uint256 nonce,uint256 deadline)"
-        );
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -96,18 +81,6 @@ contract MocaId is
     }
 
     /*//////////////////////////////////////////////////////////////
-                            MODIFIER
-    //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @dev Reverts if called by any account other than the signer.
-     */
-    modifier onlySigner() {
-        require(_signer == _msgSender(), "NOT_SIGNER");
-        _;
-    }
-
-    /*//////////////////////////////////////////////////////////////
                             REGISTRATION LOGIC
     //////////////////////////////////////////////////////////////*/
 
@@ -119,7 +92,11 @@ contract MocaId is
     function available(string calldata mocaId) public view returns (bool) {
         bytes32 label = keccak256(bytes(mocaId));
         uint256 tokenId = uint256(label);
-        return _valid(mocaId) && !super._exists(tokenId);
+        bool patternValid = true;
+        if (_middleware != address(0)) {
+            patternValid = IMiddleware(_middleware).namePatternValid(mocaId);
+        }
+        return patternValid && !super._exists(tokenId);
     }
 
     /**
@@ -127,53 +104,30 @@ contract MocaId is
      *
      * @param mocaId    The mocaId to register
      * @param to        The address that will own the mocaId
-     * @param signature The signature signed by signer
+     * @param preData   The register data for preprocess.
+     * @param postData  The register data for postprocess.
      */
     function register(
         string calldata mocaId,
         address to,
-        bytes calldata signature
+        bytes calldata preData,
+        bytes calldata postData
     ) external {
-        DataTypes.EIP712Signature memory sig;
-
-        (sig.v, sig.r, sig.s, sig.deadline) = abi.decode(
-            signature,
-            (uint8, bytes32, bytes32, uint256)
-        );
-
-        _requiresExpectedSigner(
-            _hashTypedDataV4(
-                keccak256(
-                    abi.encode(
-                        _REGISTER_TYPEHASH,
-                        mocaId,
-                        to,
-                        nonces[to]++,
-                        sig.deadline
-                    )
-                )
-            ),
-            _signer,
-            sig.v,
-            sig.r,
-            sig.s,
-            sig.deadline
-        );
+        if (_middleware != address(0)) {
+            IMiddleware(_middleware).preProcess(
+                DataTypes.RegisterNameParams(mocaId, to),
+                preData
+            );
+        }
 
         _register(mocaId, to);
-    }
 
-    /**
-     * @notice Mints a new mocaId by trusted caller.
-     *
-     * @param mocaId   The mocaId to register
-     * @param to       The address that will own the mocaId
-     */
-    function trustedRegister(
-        string calldata mocaId,
-        address to
-    ) external onlySigner {
-        _register(mocaId, to);
+        if (_middleware != address(0)) {
+            IMiddleware(_middleware).postProcess(
+                DataTypes.RegisterNameParams(mocaId, to),
+                postData
+            );
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -220,10 +174,16 @@ contract MocaId is
     }
 
     /**
-     * @notice Set the signer.
+     * @notice Set the middleware and data.
      */
-    function setSigner(address signer) external onlyOwner {
-        _signer = signer;
+    function setMiddleware(
+        address middleware,
+        bytes calldata data
+    ) external onlyOwner {
+        _middleware = middleware;
+        if (_middleware != address(0)) {
+            IMiddleware(_middleware).setMwData(data);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -248,42 +208,9 @@ contract MocaId is
         emit Register(mocaId, tokenId, to);
     }
 
-    function _domainSeparatorName()
-        internal
-        pure
-        override
-        returns (string memory)
-    {
-        return "MocaId";
-    }
-
     function _isMetadataAuthorised(
         uint256 tokenId
     ) internal view override returns (bool) {
         return super._isApprovedOrOwner(msg.sender, tokenId);
-    }
-
-    function _valid(string calldata mocaId) internal pure returns (bool) {
-        // check unicode rune count, if rune count is >=3, byte length must be >=3.
-        if (mocaId.strlen() < 3) {
-            return false;
-        }
-        bytes memory nb = bytes(mocaId);
-        // zero width for /u200b /u200c /u200d and U+FEFF
-        for (uint256 i; i < nb.length - 2; i++) {
-            if (bytes1(nb[i]) == 0xe2 && bytes1(nb[i + 1]) == 0x80) {
-                if (
-                    bytes1(nb[i + 2]) == 0x8b ||
-                    bytes1(nb[i + 2]) == 0x8c ||
-                    bytes1(nb[i + 2]) == 0x8d
-                ) {
-                    return false;
-                }
-            } else if (bytes1(nb[i]) == 0xef) {
-                if (bytes1(nb[i + 1]) == 0xbb && bytes1(nb[i + 2]) == 0xbf)
-                    return false;
-            }
-        }
-        return true;
     }
 }
