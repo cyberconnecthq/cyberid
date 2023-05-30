@@ -51,7 +51,7 @@ contract MocaId is
      * @param tokenId The tokenId of the mocaId
      * @param to      The address that owns the mocaId
      */
-    event Register(string mocaId, uint256 tokenId, address indexed to);
+    event Register(string mocaId, uint256 indexed tokenId, address indexed to);
 
     /*//////////////////////////////////////////////////////////////
                         CONSTRUCTORS AND INITIALIZERS
@@ -94,11 +94,14 @@ contract MocaId is
     function available(string calldata mocaId) public view returns (bool) {
         bytes32 label = keccak256(bytes(mocaId));
         uint256 tokenId = uint256(label);
-        bool patternValid = true;
-        if (_middleware != address(0)) {
-            patternValid = IMiddleware(_middleware).namePatternValid(mocaId);
+        if (!_exists(tokenId)) {
+            if (_middleware != address(0)) {
+                return IMiddleware(_middleware).namePatternValid(mocaId);
+            } else {
+                return true;
+            }
         }
-        return patternValid && !super._exists(tokenId);
+        return false;
     }
 
     /**

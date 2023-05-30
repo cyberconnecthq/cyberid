@@ -4,6 +4,7 @@ pragma solidity 0.8.14;
 
 import { IMiddleware } from "../interfaces/IMiddleware.sol";
 import { DataTypes } from "../libraries/DataTypes.sol";
+import { Constants } from "../libraries/Constants.sol";
 import { EIP712 } from "../base/EIP712.sol";
 
 contract PermissionMw is IMiddleware, EIP712 {
@@ -22,15 +23,6 @@ contract PermissionMw is IMiddleware, EIP712 {
     mapping(address => uint256) public nonces;
 
     address public immutable NAME_REGISTRY; // solhint-disable-line
-
-    /*//////////////////////////////////////////////////////////////
-                            CONSTANTS
-    //////////////////////////////////////////////////////////////*/
-
-    bytes32 internal constant _REGISTER_TYPEHASH =
-        keccak256(
-            "register(string name,address to,uint256 nonce,uint256 deadline)"
-        );
 
     /*//////////////////////////////////////////////////////////////
                             CONSTRUCTOR
@@ -78,7 +70,7 @@ contract PermissionMw is IMiddleware, EIP712 {
             _hashTypedDataV4(
                 keccak256(
                     abi.encode(
-                        _REGISTER_TYPEHASH,
+                        Constants._REGISTER_TYPEHASH,
                         params.name,
                         params.to,
                         nonces[params.to]++,

@@ -101,12 +101,18 @@ library LibDeploy {
         address mocaIdProxy = dc.deploy(
             abi.encodePacked(
                 type(ERC1967Proxy).creationCode,
-                abi.encode(mocaIdImpl, "")
+                abi.encode(
+                    mocaIdImpl,
+                    abi.encodeWithSelector(
+                        MocaId.initialize.selector,
+                        "MOCA ID",
+                        "MOCAID",
+                        msg.sender
+                    )
+                )
             ),
             SALT
         );
-
-        MocaId(mocaIdProxy).initialize("MOCA ID", "MOCAID", msg.sender);
 
         _write(vm, "MocaId(Proxy)", mocaIdProxy);
 
