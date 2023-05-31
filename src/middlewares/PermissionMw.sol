@@ -87,15 +87,9 @@ contract PermissionMw is IMiddleware, EIP712 {
     }
 
     /// @inheritdoc IMiddleware
-    function postProcess(
-        DataTypes.RegisterNameParams calldata,
-        bytes calldata
-    ) external override onlyNameRegistry {}
-
-    /// @inheritdoc IMiddleware
     function namePatternValid(
         string calldata name
-    ) external pure returns (bool) {
+    ) external pure override returns (bool) {
         bytes memory byteName = bytes(name);
 
         if (byteName.length > 20 || byteName.length == 0) {

@@ -6,10 +6,13 @@ import { OwnableUpgradeable } from "openzeppelin-upgradeable/contracts/access/Ow
 import { ERC721Upgradeable } from "openzeppelin-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
 import { UUPSUpgradeable } from "openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { Initializable } from "openzeppelin-upgradeable/contracts/proxy/utils/Initializable.sol";
+
 import { IMiddleware } from "../interfaces/IMiddleware.sol";
-import { MetadataResolver } from "../base/MetadataResolver.sol";
+
 import { LibString } from "../libraries/LibString.sol";
 import { DataTypes } from "../libraries/DataTypes.sol";
+
+import { MetadataResolver } from "../base/MetadataResolver.sol";
 
 contract MocaId is
     Initializable,
@@ -38,17 +41,6 @@ contract MocaId is
      * @notice The number of mocaIds minted.
      */
     uint256 internal _mintCount;
-
-    /**
-     * @notice The number of mocaIds burned.
-     */
-    uint256 internal _burnCount;
-
-    /**
-     * @dev Added to allow future versions to add new variables in case this contract becomes
-     *      inherited. See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
-     */
-    uint256[40] private __gap;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -120,55 +112,58 @@ contract MocaId is
      * @param mocaId    The mocaId to register
      * @param to        The address that will own the mocaId
      * @param preData   The register data for preprocess.
-     * @param postData  The register data for postprocess.
      */
     function register(
         string calldata mocaId,
         address to,
-        bytes calldata preData,
-        bytes calldata postData
+        bytes calldata preData
     ) external {
         if (middleware != address(0)) {
             DataTypes.RegisterNameParams memory params = DataTypes
                 .RegisterNameParams(msg.sender, mocaId, to);
             IMiddleware(middleware).preProcess(params, preData);
-            _register(mocaId, to);
-            IMiddleware(middleware).postProcess(params, postData);
-        } else {
-            _register(mocaId, to);
         }
+        _register(mocaId, to);
     }
 
     /**
      * @notice Burns a token.
      *
-     * @param tokenId The token ID to burn.
+     * @param tokenId The token id to burn.
      */
     function burn(uint256 tokenId) external {
-        require(
-            _isApprovedOrOwner(msg.sender, tokenId),
-            "ERC721: caller is not token owner or approved"
-        );
+        require(_isApprovedOrOwner(msg.sender, tokenId), "UNAUTHORIZED");
         _clearMetadatas(tokenId);
         super._burn(tokenId);
-        _burnCount++;
+        --_mintCount;
     }
 
     /*//////////////////////////////////////////////////////////////
                             ERC-721 OVERRIDES
     //////////////////////////////////////////////////////////////*/
 
-    function _transfer(address, address, uint256) internal pure override {
+    /// @inheritdoc ERC721Upgradeable
+    function transferFrom(address, address, uint256) public pure override {
         revert("TRANSFER_NOT_ALLOWED");
     }
 
-    function _mint(address to, uint256 tokenId) internal override {
-        super._mint(to, tokenId);
-        ++_mintCount;
+    /// @inheritdoc ERC721Upgradeable
+    function safeTransferFrom(address, address, uint256) public pure override {
+        revert("TRANSFER_NOT_ALLOWED");
+    }
+
+    /// @inheritdoc ERC721Upgradeable
+    function safeTransferFrom(
+        address,
+        address,
+        uint256,
+        bytes memory
+    ) public pure override {
+        revert("TRANSFER_NOT_ALLOWED");
     }
 
     /**
-     * @notice Return a distinct URI for a tokenId
+     * @notice Returns a distinct URI for a tokenId
      *
      * @param tokenId The uint256 tokenId of the mocaId
      */
@@ -183,6 +178,11 @@ contract MocaId is
                             EXTERNAL VIEW
     //////////////////////////////////////////////////////////////*/
 
+    /**
+     * @notice Gets token id of the gievn moca id string.
+     *
+     * @return uint256 The token id.
+     */
     function getTokenId(
         string calldata mocaId
     ) external pure returns (uint256) {
@@ -195,25 +195,7 @@ contract MocaId is
      * @return uint256 The total supply.
      */
     function totalSupply() external view virtual returns (uint256) {
-        return _mintCount - _burnCount;
-    }
-
-    /**
-     * @notice Gets the total number of minted tokens.
-     *
-     * @return uint256 The total minted tokens.
-     */
-    function totalMinted() external view virtual returns (uint256) {
         return _mintCount;
-    }
-
-    /**
-     * @notice Gets the total number of burned tokens.
-     *
-     * @return uint256 The total burned tokens.
-     */
-    function totalBurned() external view virtual returns (uint256) {
-        return _burnCount;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -221,14 +203,14 @@ contract MocaId is
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Set the base token uri.
+     * @notice Sets the base token uri.
      */
     function setBaseTokenUri(string calldata uri) external onlyOwner {
         baseTokenUri = uri;
     }
 
     /**
-     * @notice Set the middleware and data.
+     * @notice Sets the middleware and data.
      */
     function setMiddleware(
         address _middleware,
@@ -248,17 +230,12 @@ contract MocaId is
     function _authorizeUpgrade(address) internal view override onlyOwner {}
 
     function _register(string calldata mocaId, address to) internal {
-        require(available(mocaId), "INVALID_NAME");
+        require(available(mocaId), "NAME_NOT_AVAILABLE");
 
-        /**
-         * Mints the token by calling the ERC-721 _safeMint() function.
-         * The _safeMint() function ensures that the to address isnt 0
-         * and that the tokenId is not already minted.
-         */
         bytes32 label = keccak256(bytes(mocaId));
         uint256 tokenId = uint256(label);
         super._safeMint(to, tokenId);
-
+        ++_mintCount;
         emit Register(mocaId, tokenId, to);
     }
 

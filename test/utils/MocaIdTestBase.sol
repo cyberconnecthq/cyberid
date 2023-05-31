@@ -24,7 +24,7 @@ abstract contract MocaIdTestBase is Test {
     );
 
     function setUp() public virtual {
-        vm.startPrank(aliceAddress);
+        vm.startPrank(bobAddress);
         MocaId midImpl = new MocaId();
         ERC1967Proxy proxy = new ERC1967Proxy(
             address(midImpl),
@@ -35,6 +35,8 @@ abstract contract MocaIdTestBase is Test {
                 aliceAddress
             )
         );
+        vm.stopPrank();
+        vm.startPrank(aliceAddress);
         mid = MocaId(address(proxy));
         // set timestamp to startTs
         vm.warp(startTs);

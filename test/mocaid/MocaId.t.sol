@@ -38,19 +38,19 @@ contract MocaIdTest is MocaIdTestBase {
         emit Transfer(address(0), aliceAddress, mid.getTokenId(name));
         vm.expectEmit(true, true, true, true);
         emit Register(name, mid.getTokenId(name), aliceAddress);
-        mid.register(name, aliceAddress, "", "");
+        mid.register(name, aliceAddress, "");
     }
 
     function test_NameRegistered_QueryAvailable_NotAvailable() public {
         assertTrue(mid.available("test"));
         string memory name = "test";
-        mid.register(name, aliceAddress, "", "");
+        mid.register(name, aliceAddress, "");
         assertFalse(mid.available("test"));
     }
 
     function test_NameRegistered_Transfer_RevertNowAllowed() public {
         string memory name = "test";
-        mid.register(name, aliceAddress, "", "");
+        mid.register(name, aliceAddress, "");
         uint256 tokenId = mid.getTokenId(name);
         vm.expectRevert("TRANSFER_NOT_ALLOWED");
         mid.transferFrom(aliceAddress, bobAddress, tokenId);
@@ -63,27 +63,19 @@ contract MocaIdTest is MocaIdTestBase {
     function test_NameBurned_Register_Success() public {
         string memory name = "test";
         assertEq(0, mid.totalSupply());
-        assertEq(0, mid.totalMinted());
-        assertEq(0, mid.totalBurned());
 
-        mid.register(name, aliceAddress, "", "");
+        mid.register(name, aliceAddress, "");
         assertEq(1, mid.totalSupply());
-        assertEq(1, mid.totalMinted());
-        assertEq(0, mid.totalBurned());
 
         mid.burn(mid.getTokenId(name));
         assertEq(0, mid.totalSupply());
-        assertEq(1, mid.totalMinted());
-        assertEq(1, mid.totalBurned());
 
-        mid.register(name, aliceAddress, "", "");
+        mid.register(name, aliceAddress, "");
         assertEq(1, mid.totalSupply());
-        assertEq(2, mid.totalMinted());
-        assertEq(1, mid.totalBurned());
     }
 
     function test_BaseUriNotSet_TokenUri_Success() public {
-        mid.register("alice", aliceAddress, "", "");
+        mid.register("alice", aliceAddress, "");
         uint256 tokenId = mid.getTokenId("alice");
         assertEq(
             mid.tokenURI(tokenId),
@@ -92,7 +84,7 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_BaseUriSet_TokenUri_Success() public {
-        mid.register("alice", aliceAddress, "", "");
+        mid.register("alice", aliceAddress, "");
         string memory baseUri = "https://api.cyberconnect.dev/";
         mid.setBaseTokenUri(baseUri);
         uint256 tokenId = mid.getTokenId("alice");
@@ -124,7 +116,7 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_NameRegistered_SetMetadata_ReadSuccess() public {
-        mid.register("alice", aliceAddress, "", "");
+        mid.register("alice", aliceAddress, "");
 
         uint256 tokenId = mid.getTokenId("alice");
         string memory avatarKey = "avatar";
@@ -153,7 +145,7 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_MetadataSet_ClearMetadata_ReadSuccess() public {
-        mid.register("alice", aliceAddress, "", "");
+        mid.register("alice", aliceAddress, "");
 
         uint256 tokenId = mid.getTokenId("alice");
         DataTypes.MetadataPair[]
@@ -169,7 +161,7 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_MetadataSet_ClearMetadataByOthers_RevertUnAuth() public {
-        mid.register("alice", aliceAddress, "", "");
+        mid.register("alice", aliceAddress, "");
 
         uint256 tokenId = mid.getTokenId("alice");
         DataTypes.MetadataPair[]
@@ -188,7 +180,7 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_AliceIsOwner_BobUpgradeContract_ReverNotOwner() public {
-        mid.register("alice", aliceAddress, "", "");
+        mid.register("alice", aliceAddress, "");
         vm.stopPrank();
         vm.startPrank(bobAddress);
         vm.expectRevert("Ownable: caller is not the owner");
@@ -198,7 +190,7 @@ contract MocaIdTest is MocaIdTestBase {
     function test_NameRegistered_UpgradeContract_NameIsStillRegistered()
         public
     {
-        mid.register("alice", aliceAddress, "", "");
+        mid.register("alice", aliceAddress, "");
         MocaId implV2 = new MocaId();
         mid.upgradeTo(address(implV2));
         assertEq(mid.ownerOf(mid.getTokenId("alice")), aliceAddress);

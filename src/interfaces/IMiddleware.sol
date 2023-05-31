@@ -24,17 +24,6 @@ interface IMiddleware {
     ) external payable;
 
     /**
-     * @notice Process that runs after the name creation happens.
-     *
-     * @param params The params for creating name.
-     * @param data Extra data to process.
-     */
-    function postProcess(
-        DataTypes.RegisterNameParams calldata params,
-        bytes calldata data
-    ) external;
-
-    /**
      * @notice Validates the name pattern.
      *
      * @param name The name to validate.

@@ -17,8 +17,8 @@ const types = {
 // *** IMPORTANT ***
 // update below values to correct values
 // ------------- contract addresses -------------
-const MocaIdAddress = "0x42fa95cdc898b40d8e9ddafb4db90df560a8d62e";
-const PermissionMwAddress = "0x78a4c35cccc4eca7d987fdc38811c73ed36c2321";
+const MocaIdAddress = "0x1622b8d366c530635c0072ba969a23c9bde845a5";
+const PermissionMwAddress = "0xcaeef6a356e83add13025e9dd8a90ee131c06211";
 
 // ------------- register params -------------
 // 2033-05-18T11:33:20, can be updated to a value that wish the signature to be expired
@@ -80,7 +80,7 @@ const register = async () => {
     MocaIdAbi,
     wallet
   );
-  const tx = await mocaIdContract.register(nameToRegister, to, data, "0x");
+  const tx = await mocaIdContract.register(nameToRegister, to, data);
   await tx.wait();
   console.log("Transaction hash:", tx.hash);
 };

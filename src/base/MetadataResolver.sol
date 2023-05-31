@@ -37,7 +37,7 @@ abstract contract MetadataResolver is Initializable {
     }
 
     /*//////////////////////////////////////////////////////////////
-                            PUBLIC
+                            EXTERNAL
     //////////////////////////////////////////////////////////////*/
 
     /**
@@ -46,7 +46,7 @@ abstract contract MetadataResolver is Initializable {
      */
     function clearMetadatas(
         uint256 tokenId
-    ) public virtual authorised(tokenId) {
+    ) external virtual authorised(tokenId) {
         _clearMetadatas(tokenId);
     }
 

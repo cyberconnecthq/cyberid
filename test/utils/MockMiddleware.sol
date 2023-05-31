@@ -8,21 +8,18 @@ import { DataTypes } from "../../src/libraries/DataTypes.sol";
 contract MockMiddleware is IMiddleware {
     bytes public mwData;
 
-    function setMwData(bytes calldata data) external {
+    function setMwData(bytes calldata data) external override {
         mwData = data;
     }
 
     function preProcess(
         DataTypes.RegisterNameParams calldata params,
         bytes calldata data
-    ) external payable {}
+    ) external payable override {}
 
-    function postProcess(
-        DataTypes.RegisterNameParams calldata params,
-        bytes calldata data
-    ) external pure {}
-
-    function namePatternValid(string calldata) external pure returns (bool) {
+    function namePatternValid(
+        string calldata
+    ) external pure override returns (bool) {
         return true;
     }
 }
