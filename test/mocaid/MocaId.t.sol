@@ -41,6 +41,13 @@ contract MocaIdTest is MocaIdTestBase {
         mid.register(name, aliceAddress, "");
     }
 
+    function test_NameRegistered_RegisterAgain_RevertNameNotAvailable() public {
+        string memory name = "test";
+        mid.register(name, aliceAddress, "");
+        vm.expectRevert("NAME_NOT_AVAILABLE");
+        mid.register(name, aliceAddress, "");
+    }
+
     function test_NameRegistered_QueryAvailable_NotAvailable() public {
         assertTrue(mid.available("test"));
         string memory name = "test";
