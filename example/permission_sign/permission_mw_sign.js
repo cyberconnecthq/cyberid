@@ -1,10 +1,7 @@
+require("dotenv").config();
+const { ethers } = require("ethers");
+const MocaId = require("../../docs/abi/MocaId.json");
 const register = async () => {
-  require("dotenv").config();
-  const { ethers } = require("ethers");
-  const { signTypedData_v4 } = require("eth-sig-util");
-  const fs = require("fs");
-  const MocaId = JSON.parse(fs.readFileSync("../../docs/abi/MocaId.json"));
-
   const privateKey = process.env.PRIVATE_KEY;
   const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
   const wallet = new ethers.Wallet(privateKey, provider);
@@ -50,12 +47,7 @@ const register = async () => {
     },
   };
 
-  const Web3 = require("web3");
-  let web3 = new Web3(provider);
-  const signatureString = signTypedData_v4(
-    Buffer.from(privateKey, "hex"),
-    typedData
-  );
+  const signatureString = wallet._signTypedData(domain, types, typedData);
 
   const signature = ethers.utils.splitSignature(signatureString);
 
@@ -64,7 +56,7 @@ const register = async () => {
   const v = signature.v;
   console.log(v, r, s);
 
-  const data = web3.eth.abi.encodeParameters(
+  const data = ethers.utils.AbiCoder.encode(
     ["uint8", "bytes32", "bytes32", "uint256"],
     [v, r, s, deadline]
   );
