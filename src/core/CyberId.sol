@@ -7,7 +7,10 @@ import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import { AggregatorV3Interface } from "chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import { FixedPointMathLib } from "solmate/src/utils/FixedPointMathLib.sol";
 
+import { ICyberIdMiddleware } from "../interfaces/ICyberIdMiddleware.sol";
+
 import { LibString } from "../libraries/LibString.sol";
+import { DataTypes } from "../libraries/DataTypes.sol";
 
 import { MetadataResolver } from "../base/MetadataResolver.sol";
 
@@ -18,6 +21,11 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
     /*//////////////////////////////////////////////////////////////
                             STORAGE
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Middleware contract that processes before register, renew and bid.
+     */
+    address public middleware;
 
     /**
      * @notice Maps each commit to the timestamp at which it was created.
@@ -43,22 +51,22 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
                                 CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    uint256 internal constant GRACE_PERIOD = 30 days;
+    uint256 internal constant _GRACE_PERIOD = 30 days;
 
     /// @dev enforced delay between cmommit() and register() to prevent front-running
-    uint256 internal constant REVEAL_DELAY = 60 seconds;
+    uint256 internal constant _REVEAL_DELAY = 60 seconds;
 
     /// @dev enforced delay in commit() to prevent griefing by replaying the commit
-    uint256 internal constant COMMIT_REPLAY_DELAY = 10 minutes;
+    uint256 internal constant _COMMIT_REPLAY_DELAY = 10 minutes;
 
     /// @dev 60.18-decimal fixed-point that approximates divide by 28,800 when multiplied
-    uint256 internal constant DIV_28800_UD60X18 = 3.4722222222222e13;
+    uint256 internal constant _DIV_28800_UD60X18 = 3.4722222222222e13;
 
     /// @dev Starting price of every bid during the first period
-    uint256 internal constant BID_START_PRICE = 1000 ether;
+    uint256 internal constant _BID_START_PRICE = 1000 ether;
 
     /// @dev 60.18-decimal fixed-point that decreases the price by 10% when multiplied
-    uint256 internal constant BID_PERIOD_DECREASE_UD60X18 = 0.9 ether;
+    uint256 internal constant _BID_PERIOD_DECREASE_UD60X18 = 0.9 ether;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -120,28 +128,33 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
      */
     function available(string calldata cid) public view returns (bool) {
         bytes32 label = keccak256(bytes(cid));
-        return
-            _valid(cid) &&
-            expiries[uint256(label)] + GRACE_PERIOD < block.timestamp;
+        if (expiries[uint256(label)] + _GRACE_PERIOD < block.timestamp) {
+            if (middleware != address(0)) {
+                return ICyberIdMiddleware(middleware).namePatternValid(cid);
+            } else {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
      * @notice Generates a commitment to use in a commit-reveal scheme to register a cid and
      *         prevent front-running.
      *
-     * @param cid     The cid to registere
-     * @param to      The address that will own the cid
-     * @param roundId The usd oracle roundId
-     * @param secret  A secret that will be broadcast on-chain during the reveal
+     * @param cid            The cid to registere
+     * @param to             The address that will own the cid
+     * @param secret         A secret that will be broadcast on-chain during the reveal
+     * @param middlewareData Data for middleware to process
      */
     function generateCommit(
         string calldata cid,
         address to,
-        uint80 roundId,
-        bytes32 secret
+        bytes32 secret,
+        bytes calldata middlewareData
     ) public pure returns (bytes32) {
         bytes32 label = keccak256(bytes(cid));
-        return keccak256(abi.encodePacked(label, to, roundId, secret));
+        return keccak256(abi.encodePacked(label, to, secret, middlewareData));
     }
 
     /**
@@ -153,13 +166,14 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
     function commit(bytes32 commitment) external {
         /**
          * Revert unless some time has passed since the last commit to prevent griefing by
-         * replaying the commit and restarting the REVEAL_DELAY timer.
+         * replaying the commit and restarting the _REVEAL_DELAY timer.
          *
          * Safety: cannot overflow because timestampOf[commitment] is a block.timestamp or zero
          */
         unchecked {
             require(
-                block.timestamp > timestampOf[commitment] + COMMIT_REPLAY_DELAY,
+                block.timestamp >
+                    timestampOf[commitment] + _COMMIT_REPLAY_DELAY,
                 "COMMIT_REPLAY"
             );
         }
@@ -171,76 +185,61 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
      * @notice Mints a new cid if the inputs match a previous commit and if it was called at least
      *         60 seconds after the commit's timestamp to prevent frontrunning within the same block.
      *
-     * @param cid          The cid to register
-     * @param to           The address that will own the cid
-     * @param roundId      The usd oracle roundId
-     * @param secret       The secret value in the commitment
-     * @param durationYear The duration of the registration. Unit: year
+     * @param cid            The cid to register
+     * @param to             The address that will own the cid
+     * @param secret         The secret value in the commitment
+     * @param durationYear   The duration of the registration. Unit: year
+     * @param middlewareData Data for middleware to process
      */
     function register(
         string calldata cid,
         address to,
-        uint80 roundId,
         bytes32 secret,
-        uint8 durationYear
+        uint8 durationYear,
+        bytes calldata middlewareData
     ) external payable {
-        bytes32 commitment = generateCommit(cid, to, roundId, secret);
+        bytes32 commitment = generateCommit(cid, to, secret, middlewareData);
         uint256 commitTs = timestampOf[commitment];
         unchecked {
             require(
-                block.timestamp <= commitTs + COMMIT_REPLAY_DELAY,
+                block.timestamp <= commitTs + _COMMIT_REPLAY_DELAY,
                 "NOT_COMMITTED"
             );
             require(
-                block.timestamp > commitTs + REVEAL_DELAY,
+                block.timestamp > commitTs + _REVEAL_DELAY,
                 "REGISTER_TOO_QUICK"
             );
         }
-        require(available(cid), "INVALID_NAME");
-        require(durationYear >= 1, "MIN_DURATION_ONE_YEAR");
         delete timestampOf[commitment];
 
-        uint256 cost = getPriceWeiAt(cid, roundId, durationYear);
-        require(msg.value >= cost, "INSUFFICIENT_FUNDS");
-
-        /**
-         * Mints the token by calling the ERC-721 _safeMint() function.
-         * The _safeMint() function ensures that the to address isnt 0
-         * and that the tokenId is not already minted.
-         */
-        bytes32 label = keccak256(bytes(cid));
-        uint256 tokenId = uint256(label);
-        super._safeMint(to, tokenId);
-
-        /**
-         * Set the expiration timestamp
-         */
-        unchecked {
-            expiries[tokenId] = block.timestamp + durationYear * 365 days;
+        uint256 cost;
+        if (middleware != address(0)) {
+            cost = ICyberIdMiddleware(middleware).preRegister(
+                DataTypes.RegisterCyberIdParams(
+                    msg.sender,
+                    cid,
+                    to,
+                    durationYear
+                ),
+                middlewareData
+            );
         }
 
-        /**
-         * Already checked msg.value >= cost
-         */
-        uint256 overpayment;
-        unchecked {
-            overpayment = msg.value - cost;
-        }
-
-        if (overpayment > 0) {
-            (bool sent, ) = msg.sender.call{ value: overpayment }("");
-            require(sent, "REFUND_FAILED");
-        }
-        emit Register(cid, to, expiries[tokenId], cost);
+        _register(cid, to, durationYear, cost);
     }
 
     /**
      * @notice Renew a name for a duration while it is in the renewable period.
      *
-     * @param cid          The the cid to renew
-     * @param durationYear The duration of the renewal. Unit: year
+     * @param cid            The the cid to renew
+     * @param durationYear   The duration of the renewal. Unit: year
+     * @param middlewareData Data for middleware to process
      */
-    function renew(string calldata cid, uint8 durationYear) external payable {
+    function renew(
+        string calldata cid,
+        uint8 durationYear,
+        bytes calldata middlewareData
+    ) external payable {
         /* Revert if the cid's tokenId has never been registered */
         bytes32 label = keccak256(bytes(cid));
         uint256 tokenId = uint256(label);
@@ -251,10 +250,19 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
          * Revert if the cid has passed out of the renewable period into the biddable period.
          */
         unchecked {
-            require(block.timestamp < expiryTs + GRACE_PERIOD, "NOT_RENEWABLE");
+            require(
+                block.timestamp < expiryTs + _GRACE_PERIOD,
+                "NOT_RENEWABLE"
+            );
         }
 
-        uint256 cost = getPriceWei(cid, durationYear);
+        uint256 cost;
+        if (middleware != address(0)) {
+            cost = ICyberIdMiddleware(middleware).preRenew(
+                DataTypes.RenewCyberIdParams(msg.sender, cid, durationYear),
+                middlewareData
+            );
+        }
         require(msg.value >= cost, "INSUFFICIENT_FUNDS");
 
         /**
@@ -282,10 +290,15 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
      * @notice Bid to purchase an expired cid in a dutch auction and register it for a year. The
      *         winning bid starts at ~1000.01 ETH decays exponentially until it reaches 0.
      *
-     * @param to  The address where the cid should be transferred
-     * @param cid The cid to bid on
+     * @param to             The address where the cid should be transferred
+     * @param cid            The cid to bid on
+     * @param middlewareData Data for middleware to process
      */
-    function bid(address to, string calldata cid) external payable {
+    function bid(
+        address to,
+        string calldata cid,
+        bytes calldata middlewareData
+    ) external payable {
         bytes32 label = keccak256(bytes(cid));
         uint256 tokenId = uint256(label);
         /* Revert if the token was never registered */
@@ -297,66 +310,17 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
          */
         uint256 auctionStartTimestamp;
         unchecked {
-            auctionStartTimestamp = expiryTs + GRACE_PERIOD;
+            auctionStartTimestamp = expiryTs + _GRACE_PERIOD;
         }
         require(block.timestamp >= auctionStartTimestamp, "NOT_BIDDABLE");
 
-        /**
-         * Calculate the bid price for the dutch auction which the dutchPremium + renewalFee.
-         *
-         * dutchPremium starts at 1,000 ETH and decreases by 10% every 8 hours or 28,800 seconds:
-         * dutchPremium = 1000 ether * (0.9)^(numPeriods)
-         * numPeriods = (block.timestamp - auctionStartTimestamp) / 28_800
-         *
-         * numPeriods is calculated with fixed-point multiplication which causes a slight error
-         * that increases the price (DivErr), while dutchPremium is calculated by the identity
-         * (x^y = exp(ln(x) * y)) which loses 3 digits of precision and lowers the price (ExpErr).
-         * The two errors interact in different ways keeping the price slightly higher or lower
-         * than expected as shown below:
-         *
-         * +=========+======================+========================+========================+
-         * | Periods |        NoErr         |         DivErr         |    PowErr + DivErr     |
-         * +=========+======================+========================+========================+
-         * |       1 |                900.0 | 900.000000000000606876 | 900.000000000000606000 |
-         * +---------+----------------------+------------------------+------------------------+
-         * |      10 |          348.6784401 | 348.678440100002351164 | 348.678440100002351000 |
-         * +---------+----------------------+------------------------+------------------------+
-         * |     100 | 0.026561398887587476 |   0.026561398887589867 |   0.026561398887589000 |
-         * +---------+----------------------+------------------------+------------------------+
-         * |     393 | 0.000000000000001040 |   0.000000000000001040 |   0.000000000000001000 |
-         * +---------+----------------------+------------------------+------------------------+
-         * |     394 |                  0.0 |                    0.0 |                    0.0 |
-         * +---------+----------------------+------------------------+------------------------+
-         *
-         * The values are not precomputed since space is the major constraint in this contract.
-         *
-         * Safety: auctionStartTimestamp <= block.timestamp and their difference will be under
-         * 10^10 for the next 50 years, which can be safely multiplied with DIV_28800_UD60X18
-         *
-         * Safety/Audit: cost calcuation cannot intuitively over or underflow, but needs proof
-         */
-
         uint256 cost;
-        uint256 baseFee = getPriceWei(cid, 1);
-
-        unchecked {
-            int256 periodsSD59x18 = int256(
-                (block.timestamp - auctionStartTimestamp) * DIV_28800_UD60X18
+        if (middleware != address(0)) {
+            cost = ICyberIdMiddleware(middleware).preBid(
+                DataTypes.BidCyberIdParams(msg.sender, cid, to),
+                middlewareData
             );
-
-            cost =
-                BID_START_PRICE.mulWadDown(
-                    uint256(
-                        FixedPointMathLib.powWad(
-                            int256(BID_PERIOD_DECREASE_UD60X18),
-                            periodsSD59x18
-                        )
-                    )
-                ) +
-                baseFee;
         }
-
-        /* Revert if the transaction cannot pay the full cost of the bid */
         require(msg.value >= cost, "INSUFFICIENT_FUNDS");
 
         /**
@@ -480,23 +444,6 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
                             PUBLIC VIEW
     //////////////////////////////////////////////////////////////*/
 
-    function getPriceWeiAt(
-        string calldata cid,
-        uint80 roundId,
-        uint durationYear
-    ) public view returns (uint256) {
-        // todo: price calculation
-        return _attoUSDToWeiAt(cid.strlen() * durationYear, roundId);
-    }
-
-    function getPriceWei(
-        string calldata cid,
-        uint durationYear
-    ) public view returns (uint256) {
-        // todo: price calculation
-        return _attoUSDToWei(cid.strlen() * durationYear);
-    }
-
     function getTokenId(string calldata cid) external pure returns (uint256) {
         return uint256(keccak256(bytes(cid)));
     }
@@ -512,9 +459,56 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
         baseTokenUri = uri;
     }
 
+    /**
+     * @notice Sets the middleware and data.
+     */
+    function setMiddleware(
+        address _middleware,
+        bytes calldata data
+    ) external onlyOwner {
+        middleware = _middleware;
+        if (middleware != address(0)) {
+            ICyberIdMiddleware(middleware).setMwData(data);
+        }
+    }
+
     /*//////////////////////////////////////////////////////////////
                              INTERNAL LOGIC
     //////////////////////////////////////////////////////////////*/
+
+    function _register(
+        string calldata cid,
+        address to,
+        uint8 durationYear,
+        uint256 cost
+    ) internal {
+        require(available(cid), "INVALID_NAME");
+        require(durationYear >= 1, "MIN_DURATION_ONE_YEAR");
+        require(msg.value >= cost, "INSUFFICIENT_FUNDS");
+
+        bytes32 label = keccak256(bytes(cid));
+        uint256 tokenId = uint256(label);
+        super._safeMint(to, tokenId);
+
+        unchecked {
+            expiries[tokenId] = block.timestamp + durationYear * 365 days;
+        }
+
+        /**
+         * Already checked msg.value >= cost
+         */
+        uint256 overpayment;
+        unchecked {
+            overpayment = msg.value - cost;
+        }
+
+        if (overpayment > 0) {
+            (bool sent, ) = msg.sender.call{ value: overpayment }("");
+            require(sent, "REFUND_FAILED");
+        }
+
+        emit Register(cid, to, expiries[tokenId], cost);
+    }
 
     function _isMetadataAuthorised(
         uint256 tokenId
@@ -525,66 +519,5 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
             require(block.timestamp < expiryTs, "EXPIRED");
         }
         return super._isApprovedOrOwner(msg.sender, tokenId);
-    }
-
-    function _valid(string calldata cid) internal pure returns (bool) {
-        // check unicode rune count, if rune count is >=3, byte length must be >=3.
-        if (cid.strlen() < 3) {
-            return false;
-        }
-        bytes memory nb = bytes(cid);
-        // zero width for /u200b /u200c /u200d and U+FEFF
-        for (uint256 i; i < nb.length - 2; i++) {
-            if (bytes1(nb[i]) == 0xe2 && bytes1(nb[i + 1]) == 0x80) {
-                if (
-                    bytes1(nb[i + 2]) == 0x8b ||
-                    bytes1(nb[i + 2]) == 0x8c ||
-                    bytes1(nb[i + 2]) == 0x8d
-                ) {
-                    return false;
-                }
-            } else if (bytes1(nb[i]) == 0xef) {
-                if (bytes1(nb[i + 1]) == 0xbb && bytes1(nb[i + 2]) == 0xbf)
-                    return false;
-            }
-        }
-        return true;
-    }
-
-    function _getPriceAt(uint80 roundId) internal view returns (int256) {
-        // prettier-ignore
-        (
-            /* uint80 roundID */,
-            int price,
-            /*uint startedAt*/,
-            /*uint timeStamp*/,
-            /*uint80 answeredInRound*/
-        ) = usdOracle.getRoundData(roundId);
-        return price;
-    }
-
-    function _getPrice() internal view returns (int256) {
-        // prettier-ignore
-        (
-            /* uint80 roundID */,
-            int price,
-            /*uint startedAt*/,
-            /*uint timeStamp*/,
-            /*uint80 answeredInRound*/
-        ) = usdOracle.latestRoundData();
-        return price;
-    }
-
-    function _attoUSDToWeiAt(
-        uint256 amount,
-        uint80 roundId
-    ) internal view returns (uint256) {
-        uint256 ethPrice = uint256(_getPriceAt(roundId));
-        return (amount * 1e8 * 1e18) / ethPrice;
-    }
-
-    function _attoUSDToWei(uint256 amount) internal view returns (uint256) {
-        uint256 ethPrice = uint256(_getPrice());
-        return (amount * 1e8 * 1e18) / ethPrice;
     }
 }

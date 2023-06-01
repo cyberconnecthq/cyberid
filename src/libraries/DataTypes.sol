@@ -20,4 +20,23 @@ library DataTypes {
         string name;
         address to;
     }
+
+    struct RegisterCyberIdParams {
+        address msgSender;
+        string cid;
+        address to;
+        uint256 durationYear;
+    }
+
+    struct RenewCyberIdParams {
+        address msgSender;
+        string cid;
+        uint256 durationYear;
+    }
+
+    struct BidCyberIdParams {
+        address msgSender;
+        string cid;
+        address to;
+    }
 }
