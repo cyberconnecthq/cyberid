@@ -81,19 +81,12 @@ contract CyberIdTest is Test {
         assertEq(commit, commitment);
     }
 
-    function test_TrustedOnly_Commit_RegistrationNotStarted() public {
-        vm.expectRevert("REGISTRATION_NOT_STARTED");
-        cid.commit(commitment);
-    }
-
-    function test_DisableTrustedOnly_Commit_CommitSuccess() public {
-        cid.disableTrustedOnly();
+    function test_ContractDeployed_Commit_CommitSuccess() public {
         cid.commit(commitment);
         assertEq(cid.timestampOf(commitment), startTs);
     }
 
     function test_Committed_CommitWithin10mins_RevertCommitReplay() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 10 minutes);
         vm.expectRevert("COMMIT_REPLAY");
@@ -101,7 +94,6 @@ contract CyberIdTest is Test {
     }
 
     function test_Committed_CommitAfter10mins_CommitSuccess() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 10 minutes + 1 seconds);
         cid.commit(commitment);
@@ -113,7 +105,6 @@ contract CyberIdTest is Test {
     }
 
     function test_CommitExpired_Register_RevertNotCommitted() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 10 minutes + 1 seconds);
         vm.expectRevert("NOT_COMMITTED");
@@ -121,7 +112,6 @@ contract CyberIdTest is Test {
     }
 
     function test_Committed_RegisterWithin60Seconds_RevertTooQuick() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 60 seconds);
         vm.expectRevert("REGISTER_TOO_QUICK");
@@ -129,7 +119,6 @@ contract CyberIdTest is Test {
     }
 
     function test_Committed_WrongDurationRegister_RevertWrongDuration() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         vm.expectRevert("MIN_DURATION_ONE_YEAR");
@@ -137,7 +126,6 @@ contract CyberIdTest is Test {
     }
 
     function test_Registered_RegisterAgain_RevertNotCommitted() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -148,7 +136,6 @@ contract CyberIdTest is Test {
     function test_Committed_RegisterWithInsufficientFunds_RevertInsufficientFunds()
         public
     {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         uint256 cost = cid.getPriceWeiAt("alice", 1, 1);
@@ -163,7 +150,6 @@ contract CyberIdTest is Test {
     }
 
     function test_NameRegisteredByOthers_Register_RevertInvalidName() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -175,7 +161,6 @@ contract CyberIdTest is Test {
     }
 
     function test_NameExpired_Register_RevertTokenExists() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -188,7 +173,6 @@ contract CyberIdTest is Test {
     }
 
     function test_Committed_Register_Success() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         uint256 cost = cid.getPriceWeiAt("alice", 1, 1);
@@ -213,7 +197,6 @@ contract CyberIdTest is Test {
     }
 
     function test_Committed_RegisterToWrongWallet_RevertRefundFail() public {
-        cid.disableTrustedOnly();
         vm.stopPrank();
         vm.startPrank(mockWalletAddress);
         cid.commit(commitment);
@@ -230,7 +213,6 @@ contract CyberIdTest is Test {
     }
 
     function test_Committed_RegisterWithOverPay_Refund() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         uint256 cost = cid.getPriceWeiAt("alice", 1, 1);
@@ -254,45 +236,9 @@ contract CyberIdTest is Test {
         assertEq(address(cid).balance, cost);
     }
 
-    function test_TrustedOnly_TrustedRegisterZeroYear_RevertWrongYear() public {
-        vm.expectRevert("MIN_DURATION_ONE_YEAR");
-        cid.trustedRegister("alice", aliceAddress, 0);
-    }
-
-    function test_TrustedOnly_TrustedRegisterInavlidName_RevertInvalidName()
-        public
-    {
-        vm.expectRevert("INVALID_NAME");
-        cid.trustedRegister("a", aliceAddress, 0);
-    }
-
-    function test_DisableTrustedOnly_TrustedRegister_RevertRegistrationStarted()
-        public
-    {
-        cid.disableTrustedOnly();
-        vm.expectRevert("REGISTRATION_STARTED");
-        cid.trustedRegister("alice", aliceAddress, 0);
-    }
-
-    function test_TrustedOnly_TrustedRegister_Success() public {
-        vm.expectEmit(true, true, true, true);
-        emit Transfer(address(0), aliceAddress, cid.getTokenId("alice"));
-        vm.expectEmit(true, true, true, true);
-        emit Register("alice", aliceAddress, startTs + 365 days, 0);
-        cid.trustedRegister("alice", aliceAddress, 1);
-    }
-
-    function test_TrustedOnly_NotOwnerTrustedRegister_RevertNotOwner() public {
-        vm.stopPrank();
-        vm.startPrank(bobAddress);
-        vm.expectRevert("Ownable: caller is not the owner");
-        cid.trustedRegister("alice", aliceAddress, 1);
-    }
-
     function test_NotRegistered_RenewWithInsufficientFunds_RevertInsufficientFunds()
         public
     {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -309,7 +255,6 @@ contract CyberIdTest is Test {
     }
 
     function test_Registered_AfterGracePeriodRenew_RevertNotRenewable() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -320,7 +265,6 @@ contract CyberIdTest is Test {
     }
 
     function test_Registered_WithinGracePeriodRenew_NameRenewed() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -338,7 +282,6 @@ contract CyberIdTest is Test {
     }
 
     function test_Registered_RenewWithWrongWallet_RevertRefundFail() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -356,7 +299,6 @@ contract CyberIdTest is Test {
     }
 
     function test_NameWithinGracePeriod_Bid_RevertNotBiddable() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -369,7 +311,6 @@ contract CyberIdTest is Test {
     function test_NameAfterGracePeriod_BidWithInsufficientFunds_RevertInsufficientFunds()
         public
     {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -385,7 +326,6 @@ contract CyberIdTest is Test {
     }
 
     function test_NameAfterGracePeriod_BidAtRound0_Success() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -411,7 +351,6 @@ contract CyberIdTest is Test {
     function test_NameAfterGracePeriod_BidAtRound0WithWrongWallet_RevertRefundFail()
         public
     {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -426,7 +365,6 @@ contract CyberIdTest is Test {
     }
 
     function test_NameAfterGracePeriod_BidAtRound394_Success() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -452,7 +390,6 @@ contract CyberIdTest is Test {
     }
 
     function test_Registered_Withdraw_OwnerReceived() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -472,7 +409,6 @@ contract CyberIdTest is Test {
     }
 
     function test_Registered_OwnerOf_Success() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -481,7 +417,6 @@ contract CyberIdTest is Test {
     }
 
     function test_Registered_ExpiredOwnerOf_RevertExpired() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -499,7 +434,6 @@ contract CyberIdTest is Test {
     }
 
     function test_Registered_SafeTransferFrom_Success() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -511,7 +445,6 @@ contract CyberIdTest is Test {
     }
 
     function test_NameExpired_SafeTransferFrom_RevertExpired() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -529,7 +462,6 @@ contract CyberIdTest is Test {
     }
 
     function test_Registered_SafeTransferFrom2_Success() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -541,7 +473,6 @@ contract CyberIdTest is Test {
     }
 
     function test_NameExpired_SafeTransferFrom2_RevertExpired() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -559,7 +490,6 @@ contract CyberIdTest is Test {
     }
 
     function test_NameExpired_TransferFrom_RevertExpired() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -571,7 +501,6 @@ contract CyberIdTest is Test {
     }
 
     function test_Registered_TransferFrom_Success() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -606,7 +535,6 @@ contract CyberIdTest is Test {
     }
 
     function test_NameRegistered_SetMetadata_ReadSuccess() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -626,7 +554,6 @@ contract CyberIdTest is Test {
     }
 
     function test_NameExpired_SetMetadata_RevertExpired() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -656,7 +583,6 @@ contract CyberIdTest is Test {
     }
 
     function test_MetadataSet_ClearMetadata_ReadSuccess() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);
@@ -675,7 +601,6 @@ contract CyberIdTest is Test {
     }
 
     function test_MetadataSet_ClearMetadataByOthers_RevertUnAuth() public {
-        cid.disableTrustedOnly();
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }("alice", aliceAddress, 1, secret, 1);

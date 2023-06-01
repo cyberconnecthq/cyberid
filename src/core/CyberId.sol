@@ -2,26 +2,22 @@
 
 pragma solidity 0.8.14;
 
+import { ERC721 } from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
+import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
 import { AggregatorV3Interface } from "chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import { FixedPointMathLib } from "solmate/src/utils/FixedPointMathLib.sol";
-import { ERC721 } from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
-import { Ownable2Step } from "openzeppelin-contracts/contracts/access/Ownable2Step.sol";
-import { MetadataResolver } from "../base/MetadataResolver.sol";
+
 import { LibString } from "../libraries/LibString.sol";
 
-contract CyberId is ERC721, Ownable2Step, MetadataResolver {
+import { MetadataResolver } from "../base/MetadataResolver.sol";
+
+contract CyberId is ERC721, Ownable, MetadataResolver {
     using LibString for *;
     using FixedPointMathLib for uint256;
 
     /*//////////////////////////////////////////////////////////////
                             STORAGE
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Flag that determines if registration can occur through trustedRegister or register
-     * @dev    Initialized to true and can only be changed to false.
-     */
-    bool public trustedOnly;
 
     /**
      * @notice Maps each commit to the timestamp at which it was created.
@@ -47,13 +43,13 @@ contract CyberId is ERC721, Ownable2Step, MetadataResolver {
                                 CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
+    uint256 internal constant GRACE_PERIOD = 30 days;
+
     /// @dev enforced delay between cmommit() and register() to prevent front-running
     uint256 internal constant REVEAL_DELAY = 60 seconds;
 
     /// @dev enforced delay in commit() to prevent griefing by replaying the commit
     uint256 internal constant COMMIT_REPLAY_DELAY = 10 minutes;
-
-    uint256 public constant GRACE_PERIOD = 30 days;
 
     /// @dev 60.18-decimal fixed-point that approximates divide by 28,800 when multiplied
     uint256 internal constant DIV_28800_UD60X18 = 3.4722222222222e13;
@@ -110,7 +106,6 @@ contract CyberId is ERC721, Ownable2Step, MetadataResolver {
         string memory _symbol,
         address _usdOracle
     ) ERC721(_name, _symbol) {
-        trustedOnly = true;
         usdOracle = AggregatorV3Interface(_usdOracle);
     }
 
@@ -156,8 +151,6 @@ contract CyberId is ERC721, Ownable2Step, MetadataResolver {
      * @param commitment The commitment hash to be saved on-chain
      */
     function commit(bytes32 commitment) external {
-        require(!trustedOnly, "REGISTRATION_NOT_STARTED");
-
         /**
          * Revert unless some time has passed since the last commit to prevent griefing by
          * replaying the commit and restarting the REVEAL_DELAY timer.
@@ -239,30 +232,6 @@ contract CyberId is ERC721, Ownable2Step, MetadataResolver {
             require(sent, "REFUND_FAILED");
         }
         emit Register(cid, to, expiries[tokenId], cost);
-    }
-
-    /**
-     * @notice Mints a new cid before public registration starts.
-     *
-     * @param cid          The cid to register
-     * @param to           The address that will own the cid
-     * @param durationYear The duration of the registration. Unit: year
-     */
-    function trustedRegister(
-        string calldata cid,
-        address to,
-        uint8 durationYear
-    ) external onlyOwner {
-        require(trustedOnly, "REGISTRATION_STARTED");
-        require(available(cid), "INVALID_NAME");
-        require(durationYear >= 1, "MIN_DURATION_ONE_YEAR");
-        bytes32 label = keccak256(bytes(cid));
-        uint256 tokenId = uint256(label);
-        super._safeMint(to, tokenId);
-        unchecked {
-            expiries[tokenId] = block.timestamp + durationYear * 365 days;
-        }
-        emit Register(cid, to, expiries[tokenId], 0);
     }
 
     /**
@@ -535,13 +504,6 @@ contract CyberId is ERC721, Ownable2Step, MetadataResolver {
     /*//////////////////////////////////////////////////////////////
                             OWNER ONLY
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Disables trustedRegister and enables register calls from any address.
-     */
-    function disableTrustedOnly() external onlyOwner {
-        delete trustedOnly;
-    }
 
     /**
      * @notice Set the base token uri.
