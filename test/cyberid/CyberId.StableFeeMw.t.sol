@@ -48,7 +48,8 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
         assertTrue(cid.available(unicode"alice"));
         assertTrue(cid.available(unicode"bob"));
         assertTrue(cid.available(unicode"bobb"));
-        assertTrue(cid.available(unicode"_"));
+        assertFalse(cid.available(unicode"1_"));
+        assertFalse(cid.available(unicode"_"));
         assertFalse(cid.available(unicode"三个字"));
         assertFalse(cid.available(unicode"四个字儿"));
         assertFalse(cid.available(unicode"😋😋😋"));

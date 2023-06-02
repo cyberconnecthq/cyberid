@@ -11,7 +11,7 @@ abstract contract LowerCaseCyberIdMiddleware is ICyberIdMiddleware {
     ) external pure virtual override returns (bool) {
         bytes memory byteName = bytes(name);
 
-        if (byteName.length > 20 || byteName.length == 0) {
+        if (byteName.length > 20 || byteName.length < 3) {
             return false;
         }
 
