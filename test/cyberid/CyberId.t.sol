@@ -98,7 +98,7 @@ contract CyberIdTest is CyberIdTestBase {
 
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds * 2);
-        vm.expectRevert("INVALID_NAME");
+        vm.expectRevert("NAME_NOT_AVAILABLE");
         cid.register("alice", aliceAddress, secret, 1, "");
     }
 
@@ -110,7 +110,7 @@ contract CyberIdTest is CyberIdTestBase {
         vm.warp(startTs + 61 seconds + 365 days + 30 days);
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds + 365 days + 30 days + 61 seconds);
-        vm.expectRevert("ERC721: token already minted");
+        vm.expectRevert("NAME_NOT_AVAILABLE");
         cid.register("alice", aliceAddress, secret, 1, "");
     }
 
@@ -372,6 +372,46 @@ contract CyberIdTest is CyberIdTestBase {
         cid.clearMetadatas(tokenId);
         assertEq(cid.getMetadata(tokenId, "1"), "");
         assertEq(cid.getMetadata(tokenId, "2"), "");
+    }
+
+    function test_MetadataSet_BidByNewOwner_MetadataCleared() public {
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
+
+        uint256 tokenId = cid.getTokenId("alice");
+        DataTypes.MetadataPair[]
+            memory metadatas = new DataTypes.MetadataPair[](2);
+        metadatas[0] = DataTypes.MetadataPair("1", "1");
+        metadatas[1] = DataTypes.MetadataPair("2", "2");
+        cid.batchSetMetadatas(tokenId, metadatas);
+        assertEq(cid.getMetadata(tokenId, "1"), "1");
+        assertEq(cid.getMetadata(tokenId, "2"), "2");
+
+        vm.warp(startTs + 61 seconds + 365 days + 30 days);
+        cid.bid{ value: 1 ether }(bobAddress, "alice", "");
+        assertEq(cid.getMetadata(tokenId, "1"), "");
+        assertEq(cid.getMetadata(tokenId, "2"), "");
+    }
+
+    function test_MetadataSet_BidBySameOwner_MetadataNotCleared() public {
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
+
+        uint256 tokenId = cid.getTokenId("alice");
+        DataTypes.MetadataPair[]
+            memory metadatas = new DataTypes.MetadataPair[](2);
+        metadatas[0] = DataTypes.MetadataPair("1", "1");
+        metadatas[1] = DataTypes.MetadataPair("2", "2");
+        cid.batchSetMetadatas(tokenId, metadatas);
+        assertEq(cid.getMetadata(tokenId, "1"), "1");
+        assertEq(cid.getMetadata(tokenId, "2"), "2");
+
+        vm.warp(startTs + 61 seconds + 365 days + 30 days);
+        cid.bid{ value: 1 ether }(aliceAddress, "alice", "");
+        assertEq(cid.getMetadata(tokenId, "1"), "1");
+        assertEq(cid.getMetadata(tokenId, "2"), "2");
     }
 
     function test_MetadataSet_ClearMetadataByOthers_RevertUnAuth() public {

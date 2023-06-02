@@ -108,7 +108,7 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
      */
     function available(string calldata cid) public view returns (bool) {
         bytes32 label = keccak256(bytes(cid));
-        if (expiries[uint256(label)] + _GRACE_PERIOD < block.timestamp) {
+        if (expiries[uint256(label)] == 0) {
             if (middleware != address(0)) {
                 return ICyberIdMiddleware(middleware).namePatternValid(cid);
             } else {
@@ -311,7 +311,11 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
          *
          * Safety: expiryTs cannot overflow given block.timestamp and registration period sizes.
          */
-        _safeTransfer(super.ownerOf(tokenId), to, tokenId, "");
+        address originalOwner = super.ownerOf(tokenId);
+        _safeTransfer(originalOwner, to, tokenId, "");
+        if (originalOwner != to) {
+            _clearMetadatas(tokenId);
+        }
 
         unchecked {
             expiries[tokenId] = block.timestamp + 365 days;
@@ -437,7 +441,7 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
         uint8 durationYear,
         uint256 cost
     ) internal {
-        require(available(cid), "INVALID_NAME");
+        require(available(cid), "NAME_NOT_AVAILABLE");
         require(durationYear >= 1, "MIN_DURATION_ONE_YEAR");
 
         bytes32 label = keccak256(bytes(cid));
