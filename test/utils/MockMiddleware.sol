@@ -15,6 +15,10 @@ contract MockMiddleware is IMiddleware, ICyberIdMiddleware {
         mwData = data;
     }
 
+    function skipCommit() external pure returns (bool) {
+        return false;
+    }
+
     function preProcess(
         DataTypes.RegisterNameParams calldata,
         bytes calldata

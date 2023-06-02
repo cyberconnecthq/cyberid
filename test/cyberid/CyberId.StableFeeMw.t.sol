@@ -27,12 +27,14 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
         mockWalletAddress = address(mockWallet);
         vm.deal(mockWalletAddress, startBalance);
         MockUsdOracle oracle = new MockUsdOracle();
-        uint256[] memory prices = new uint256[](5);
-        prices[2] = 20294266869609;
-        prices[3] = 5073566717402;
-        prices[4] = 158548959919;
-        stableFeeMw = new StableFeeMiddleware(address(oracle), prices);
-        cid.setMiddleware(address(stableFeeMw), abi.encode(treasuryAddress));
+        stableFeeMw = new StableFeeMiddleware(address(oracle), address(cid));
+        cid.setMiddleware(
+            address(stableFeeMw),
+            abi.encode(
+                treasuryAddress,
+                [uint256(0), 0, 20294266869609, 5073566717402, 158548959919]
+            )
+        );
         preData = abi.encode(uint80(1));
         commitmentWithPreData = cid.generateCommit(
             "alice",

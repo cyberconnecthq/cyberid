@@ -13,6 +13,11 @@ interface ICyberIdMiddleware {
     function setMwData(bytes calldata data) external;
 
     /**
+     * @notice Indicates if commit-reveal should be skipped.
+     */
+    function skipCommit() external pure returns (bool);
+
+    /**
      * @notice Process that runs before the register happens.
      *
      * @param params The params for register cid.

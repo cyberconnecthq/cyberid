@@ -5,6 +5,41 @@ pragma solidity 0.8.14;
 import { ICyberIdMiddleware } from "../../interfaces/ICyberIdMiddleware.sol";
 
 abstract contract LowerCaseCyberIdMiddleware is ICyberIdMiddleware {
+    /*//////////////////////////////////////////////////////////////
+                            STORAGE
+    //////////////////////////////////////////////////////////////*/
+
+    address public immutable NAME_REGISTRY; // solhint-disable-line
+
+    /*//////////////////////////////////////////////////////////////
+                            CONSTRUCTOR
+    //////////////////////////////////////////////////////////////*/
+
+    constructor(address nameRegistry) {
+        NAME_REGISTRY = nameRegistry;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            MODIFIERS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @dev Reverts if called by any account other than the name registry.
+     */
+    modifier onlyNameRegistry() {
+        require(NAME_REGISTRY == msg.sender, "NOT_NAME_REGISTRY");
+        _;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    ICyberIdMiddleware OVERRIDES
+    //////////////////////////////////////////////////////////////*/
+
+    /// @inheritdoc ICyberIdMiddleware
+    function skipCommit() external pure virtual override returns (bool) {
+        return false;
+    }
+
     /// @inheritdoc ICyberIdMiddleware
     function namePatternValid(
         string calldata name

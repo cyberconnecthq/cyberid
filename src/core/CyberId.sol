@@ -178,19 +178,29 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
         uint8 durationYear,
         bytes calldata middlewareData
     ) external payable {
-        bytes32 commitment = generateCommit(cid, to, secret, middlewareData);
-        uint256 commitTs = timestampOf[commitment];
-        unchecked {
-            require(
-                block.timestamp <= commitTs + _COMMIT_REPLAY_DELAY,
-                "NOT_COMMITTED"
+        if (
+            middleware == address(0) ||
+            !ICyberIdMiddleware(middleware).skipCommit()
+        ) {
+            bytes32 commitment = generateCommit(
+                cid,
+                to,
+                secret,
+                middlewareData
             );
-            require(
-                block.timestamp > commitTs + _REVEAL_DELAY,
-                "REGISTER_TOO_QUICK"
-            );
+            uint256 commitTs = timestampOf[commitment];
+            unchecked {
+                require(
+                    block.timestamp <= commitTs + _COMMIT_REPLAY_DELAY,
+                    "NOT_COMMITTED"
+                );
+                require(
+                    block.timestamp > commitTs + _REVEAL_DELAY,
+                    "REGISTER_TOO_QUICK"
+                );
+            }
+            delete timestampOf[commitment];
         }
-        delete timestampOf[commitment];
 
         uint256 cost;
         if (middleware != address(0)) {

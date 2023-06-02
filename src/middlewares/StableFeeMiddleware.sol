@@ -31,11 +31,11 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
     address public recipient;
 
     // Rent in base price units by length
-    uint256 public immutable price1Letter;
-    uint256 public immutable price2Letter;
-    uint256 public immutable price3Letter;
-    uint256 public immutable price4Letter;
-    uint256 public immutable price5Letter;
+    uint256 public price1Letter;
+    uint256 public price2Letter;
+    uint256 public price3Letter;
+    uint256 public price4Letter;
+    uint256 public price5Letter;
 
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
@@ -54,13 +54,11 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
                             CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor(address _oracleAddress, uint256[] memory _rentPrices) {
+    constructor(
+        address _oracleAddress,
+        address cyberId
+    ) LowerCaseCyberIdMiddleware(cyberId) {
         usdOracle = AggregatorV3Interface(_oracleAddress);
-        price1Letter = _rentPrices[0];
-        price2Letter = _rentPrices[1];
-        price3Letter = _rentPrices[2];
-        price4Letter = _rentPrices[3];
-        price5Letter = _rentPrices[4];
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -68,9 +66,17 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc ICyberIdMiddleware
-    function setMwData(bytes calldata data) external override {
-        address _recipient = abi.decode(data, (address));
+    function setMwData(bytes calldata data) external override onlyNameRegistry {
+        (address _recipient, uint256[5] memory rentPrices) = abi.decode(
+            data,
+            (address, uint256[5])
+        );
         recipient = _recipient;
+        price1Letter = rentPrices[0];
+        price2Letter = rentPrices[1];
+        price3Letter = rentPrices[2];
+        price4Letter = rentPrices[3];
+        price5Letter = rentPrices[4];
     }
 
     /// @inheritdoc ICyberIdMiddleware
