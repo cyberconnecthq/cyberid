@@ -21,7 +21,7 @@ interface ICyberIdMiddleware {
     function preRegister(
         DataTypes.RegisterCyberIdParams calldata params,
         bytes calldata data
-    ) external returns (uint256);
+    ) external payable returns (uint256);
 
     /**
      * @notice Process that runs before the renew happens.
@@ -32,7 +32,7 @@ interface ICyberIdMiddleware {
     function preRenew(
         DataTypes.RenewCyberIdParams calldata params,
         bytes calldata data
-    ) external returns (uint256);
+    ) external payable returns (uint256);
 
     /**
      * @notice Process that runs before the bid happens.
@@ -43,7 +43,7 @@ interface ICyberIdMiddleware {
     function preBid(
         DataTypes.BidCyberIdParams calldata params,
         bytes calldata data
-    ) external returns (uint256);
+    ) external payable returns (uint256);
 
     /**
      * @notice Validates the name pattern.

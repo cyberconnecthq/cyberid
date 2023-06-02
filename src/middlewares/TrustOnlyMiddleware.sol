@@ -14,7 +14,7 @@ contract TrustOnlyMiddleware is LowerCaseCyberIdMiddleware {
     function preRegister(
         DataTypes.RegisterCyberIdParams calldata,
         bytes calldata
-    ) external pure override returns (uint256) {
+    ) external payable override returns (uint256) {
         return 0;
     }
 
@@ -22,7 +22,7 @@ contract TrustOnlyMiddleware is LowerCaseCyberIdMiddleware {
     function preRenew(
         DataTypes.RenewCyberIdParams calldata,
         bytes calldata
-    ) external pure override returns (uint256) {
+    ) external payable override returns (uint256) {
         return 0;
     }
 
@@ -30,7 +30,7 @@ contract TrustOnlyMiddleware is LowerCaseCyberIdMiddleware {
     function preBid(
         DataTypes.BidCyberIdParams calldata,
         bytes calldata
-    ) external pure override returns (uint256) {
+    ) external payable override returns (uint256) {
         return 0;
     }
 }

@@ -4,8 +4,6 @@ pragma solidity 0.8.14;
 
 import { ERC721 } from "openzeppelin-contracts/contracts/token/ERC721/ERC721.sol";
 import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
-import { AggregatorV3Interface } from "chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import { FixedPointMathLib } from "solmate/src/utils/FixedPointMathLib.sol";
 
 import { ICyberIdMiddleware } from "../interfaces/ICyberIdMiddleware.sol";
 
@@ -16,7 +14,6 @@ import { MetadataResolver } from "../base/MetadataResolver.sol";
 
 contract CyberId is ERC721, Ownable, MetadataResolver {
     using LibString for *;
-    using FixedPointMathLib for uint256;
 
     /*//////////////////////////////////////////////////////////////
                             STORAGE
@@ -31,11 +28,6 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
      * @notice Maps each commit to the timestamp at which it was created.
      */
     mapping(bytes32 => uint256) public timestampOf;
-
-    /**
-     * @notice ETH/USD Oracle address.
-     */
-    AggregatorV3Interface public immutable usdOracle;
 
     /**
      * @notice Token URI prefix.
@@ -58,15 +50,6 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
 
     /// @dev enforced delay in commit() to prevent griefing by replaying the commit
     uint256 internal constant _COMMIT_REPLAY_DELAY = 10 minutes;
-
-    /// @dev 60.18-decimal fixed-point that approximates divide by 28,800 when multiplied
-    uint256 internal constant _DIV_28800_UD60X18 = 3.4722222222222e13;
-
-    /// @dev Starting price of every bid during the first period
-    uint256 internal constant _BID_START_PRICE = 1000 ether;
-
-    /// @dev 60.18-decimal fixed-point that decreases the price by 10% when multiplied
-    uint256 internal constant _BID_PERIOD_DECREASE_UD60X18 = 0.9 ether;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -111,11 +94,8 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
 
     constructor(
         string memory _name,
-        string memory _symbol,
-        address _usdOracle
-    ) ERC721(_name, _symbol) {
-        usdOracle = AggregatorV3Interface(_usdOracle);
-    }
+        string memory _symbol
+    ) ERC721(_name, _symbol) {}
 
     /*//////////////////////////////////////////////////////////////
                             REGISTRATION LOGIC
@@ -214,7 +194,9 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
 
         uint256 cost;
         if (middleware != address(0)) {
-            cost = ICyberIdMiddleware(middleware).preRegister(
+            cost = ICyberIdMiddleware(middleware).preRegister{
+                value: msg.value
+            }(
                 DataTypes.RegisterCyberIdParams(
                     msg.sender,
                     cid,
@@ -258,31 +240,16 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
 
         uint256 cost;
         if (middleware != address(0)) {
-            cost = ICyberIdMiddleware(middleware).preRenew(
+            cost = ICyberIdMiddleware(middleware).preRenew{ value: msg.value }(
                 DataTypes.RenewCyberIdParams(msg.sender, cid, durationYear),
                 middlewareData
             );
         }
-        require(msg.value >= cost, "INSUFFICIENT_FUNDS");
 
         /**
          * Renew the name by setting the new expiration timestamp
          */
         expiries[tokenId] += durationYear * 365 days;
-
-        /**
-         * Already checked msg.value >= cost
-         */
-        uint256 overpayment;
-        unchecked {
-            overpayment = msg.value - cost;
-        }
-
-        if (overpayment > 0) {
-            // solhint-disable-next-line avoid-low-level-calls
-            (bool success, ) = msg.sender.call{ value: overpayment }("");
-            require(success, "REFUND_FAILED");
-        }
         emit Renew(cid, expiries[tokenId], cost);
     }
 
@@ -316,12 +283,16 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
 
         uint256 cost;
         if (middleware != address(0)) {
-            cost = ICyberIdMiddleware(middleware).preBid(
-                DataTypes.BidCyberIdParams(msg.sender, cid, to),
+            cost = ICyberIdMiddleware(middleware).preBid{ value: msg.value }(
+                DataTypes.BidCyberIdParams(
+                    msg.sender,
+                    cid,
+                    to,
+                    auctionStartTimestamp
+                ),
                 middlewareData
             );
         }
-        require(msg.value >= cost, "INSUFFICIENT_FUNDS");
 
         /**
          * Transfer the cid to the new owner by calling the ERC-721 transfer function, and update
@@ -336,30 +307,7 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
             expiries[tokenId] = block.timestamp + 365 days;
         }
 
-        /**
-         * Refund overpayment to the caller and revert if the refund fails.
-         *
-         * Safety: msg.value >= cost by check above, so this cannot overflow
-         */
-        uint256 overpayment;
-
-        unchecked {
-            overpayment = msg.value - cost;
-        }
-
-        if (overpayment > 0) {
-            // solhint-disable-next-line avoid-low-level-calls
-            (bool success, ) = msg.sender.call{ value: overpayment }("");
-            require(success, "REFUND_FAILED");
-        }
         emit Bid(cid, expiries[tokenId], cost);
-    }
-
-    /**
-     * @notice Withdraw the contract's balance to the owner.
-     */
-    function withdraw() external {
-        payable(owner()).transfer(address(this).balance);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -434,10 +382,7 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
     function tokenURI(
         uint256 tokenId
     ) public view override returns (string memory) {
-        return
-            string(
-                abi.encodePacked(baseTokenUri, tokenId.toHexString(), ".json")
-            );
+        return string(abi.encodePacked(baseTokenUri, tokenId.toHexString()));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -484,7 +429,6 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
     ) internal {
         require(available(cid), "INVALID_NAME");
         require(durationYear >= 1, "MIN_DURATION_ONE_YEAR");
-        require(msg.value >= cost, "INSUFFICIENT_FUNDS");
 
         bytes32 label = keccak256(bytes(cid));
         uint256 tokenId = uint256(label);
@@ -492,19 +436,6 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
 
         unchecked {
             expiries[tokenId] = block.timestamp + durationYear * 365 days;
-        }
-
-        /**
-         * Already checked msg.value >= cost
-         */
-        uint256 overpayment;
-        unchecked {
-            overpayment = msg.value - cost;
-        }
-
-        if (overpayment > 0) {
-            (bool sent, ) = msg.sender.call{ value: overpayment }("");
-            require(sent, "REFUND_FAILED");
         }
 
         emit Register(cid, to, expiries[tokenId], cost);

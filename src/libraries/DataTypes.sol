@@ -38,5 +38,6 @@ library DataTypes {
         address msgSender;
         string cid;
         address to;
+        uint256 auctionStartTimestamp;
     }
 }
