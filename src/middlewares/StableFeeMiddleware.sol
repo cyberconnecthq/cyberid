@@ -30,12 +30,19 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
      */
     address public recipient;
 
+    // Rent in base price units by length
+    uint256 public immutable price1Letter;
+    uint256 public immutable price2Letter;
+    uint256 public immutable price3Letter;
+    uint256 public immutable price4Letter;
+    uint256 public immutable price5Letter;
+
     /*//////////////////////////////////////////////////////////////
                                 CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev 60.18-decimal fixed-point that approximates divide by 28,800 when multiplied
-    uint256 internal constant _DIV_28800_UD60X18 = 3.4722222222222e13;
+    /// @dev 60.18-decimal fixed-point that approximates divide by 4,605 when multiplied
+    uint256 internal constant _DIV_4605_UD60X18 = 2.17166666666666e14;
 
     /// @dev Starting price of every bid during the first period
     uint256 internal constant _BID_START_PRICE = 1000 ether;
@@ -47,8 +54,13 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
                             CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor(address oracleAddress) {
-        usdOracle = AggregatorV3Interface(oracleAddress);
+    constructor(address _oracleAddress, uint256[] memory _rentPrices) {
+        usdOracle = AggregatorV3Interface(_oracleAddress);
+        price1Letter = _rentPrices[0];
+        price2Letter = _rentPrices[1];
+        price3Letter = _rentPrices[2];
+        price4Letter = _rentPrices[3];
+        price5Letter = _rentPrices[4];
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -90,9 +102,9 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
         /**
          * Calculate the bid price for the dutch auction which the dutchPremium + renewalFee.
          *
-         * dutchPremium starts at 1,000 ETH and decreases by 10% every 8 hours or 28,800 seconds:
+         * dutchPremium starts at 1,000 ETH and decreases by 10% every 4,605 seconds:
          * dutchPremium = 1000 ether * (0.9)^(numPeriods)
-         * numPeriods = (block.timestamp - auctionStartTimestamp) / 28_800
+         * numPeriods = (block.timestamp - auctionStartTimestamp) / 4_605
          *
          * numPeriods is calculated with fixed-point multiplication which causes a slight error
          * that increases the price (DivErr), while dutchPremium is calculated by the identity
@@ -117,7 +129,7 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
          * The values are not precomputed since space is the major constraint in this contract.
          *
          * Safety: auctionStartTimestamp <= block.timestamp and their difference will be under
-         * 10^10 for the next 50 years, which can be safely multiplied with _DIV_28800_UD60X18
+         * 10^10 for the next 50 years, which can be safely multiplied with _DIV_4605_UD60X18
          *
          * Safety/Audit: cost calcuation cannot intuitively over or underflow, but needs proof
          */
@@ -128,7 +140,7 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
         unchecked {
             int256 periodsSD59x18 = int256(
                 (block.timestamp - params.auctionStartTimestamp) *
-                    _DIV_28800_UD60X18
+                    _DIV_4605_UD60X18
             );
 
             cost =
@@ -156,21 +168,41 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
         uint80 roundId,
         uint durationYear
     ) public view returns (uint256) {
-        // todo: price calculation
-        return _attoUSDToWeiAt(cid.strlen() * durationYear, roundId);
+        return _attoUSDToWeiAt(_getUSDPrice(cid, durationYear), roundId);
     }
 
     function getPriceWei(
         string calldata cid,
         uint durationYear
     ) public view returns (uint256) {
-        // todo: price calculation
-        return _attoUSDToWei(cid.strlen() * durationYear);
+        return _attoUSDToWei(_getUSDPrice(cid, durationYear));
     }
 
     /*//////////////////////////////////////////////////////////////
                              INTERNAL LOGIC
     //////////////////////////////////////////////////////////////*/
+
+    function _getUSDPrice(
+        string calldata cid,
+        uint durationYear
+    ) internal view returns (uint256) {
+        uint256 len = cid.strlen();
+        uint256 usdPrice;
+
+        if (len >= 5) {
+            usdPrice = price5Letter * durationYear * 365 days;
+        } else if (len == 4) {
+            usdPrice = price4Letter * durationYear * 365 days;
+        } else if (len == 3) {
+            usdPrice = price3Letter * durationYear * 365 days;
+        } else if (len == 2) {
+            usdPrice = price2Letter * durationYear * 365 days;
+        } else {
+            usdPrice = price1Letter * durationYear * 365 days;
+        }
+        return usdPrice;
+    }
+
     function _getPriceAt(uint80 roundId) internal view returns (int256) {
         // prettier-ignore
         (
@@ -200,12 +232,12 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
         uint80 roundId
     ) internal view returns (uint256) {
         uint256 ethPrice = uint256(_getPriceAt(roundId));
-        return (amount * 1e8 * 1e18) / ethPrice;
+        return (amount * 1e8) / ethPrice;
     }
 
     function _attoUSDToWei(uint256 amount) internal view returns (uint256) {
         uint256 ethPrice = uint256(_getPrice());
-        return (amount * 1e8 * 1e18) / ethPrice;
+        return (amount * 1e8) / ethPrice;
     }
 
     function _chargeAndRefundOverPayment(

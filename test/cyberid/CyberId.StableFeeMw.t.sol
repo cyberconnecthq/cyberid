@@ -27,7 +27,11 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
         mockWalletAddress = address(mockWallet);
         vm.deal(mockWalletAddress, startBalance);
         MockUsdOracle oracle = new MockUsdOracle();
-        stableFeeMw = new StableFeeMiddleware(address(oracle));
+        uint256[] memory prices = new uint256[](5);
+        prices[2] = 20294266869609;
+        prices[3] = 5073566717402;
+        prices[4] = 158548959919;
+        stableFeeMw = new StableFeeMiddleware(address(oracle), prices);
         cid.setMiddleware(address(stableFeeMw), abi.encode(treasuryAddress));
         preData = abi.encode(uint80(1));
         commitmentWithPreData = cid.generateCommit(
@@ -39,6 +43,27 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
     }
 
     /* solhint-disable func-name-mixedcase */
+
+    function test_MiddlewareSet_CheckNameAvailable_Available() public {
+        assertTrue(cid.available(unicode"alice"));
+        assertTrue(cid.available(unicode"bob"));
+        assertTrue(cid.available(unicode"bobb"));
+        assertTrue(cid.available(unicode"_"));
+        assertFalse(cid.available(unicode"三个字"));
+        assertFalse(cid.available(unicode"四个字儿"));
+        assertFalse(cid.available(unicode"😋😋😋"));
+        assertFalse(cid.available(unicode"😋😋😋😋"));
+        assertFalse(cid.available(unicode"    "));
+        assertFalse(cid.available(unicode""));
+        assertFalse(cid.available(unicode"二字"));
+        assertFalse(cid.available(unicode"😋😋"));
+        assertFalse(cid.available("zerowidthcharacter\u200a\u200b"));
+        assertFalse(cid.available("zerowidthcharacter\u200a\u200c"));
+        assertFalse(cid.available("zerowidthcharacter\u200a\u200d"));
+        assertFalse(cid.available("zerowidthcharacter\ufefe\ufeff"));
+        assertFalse(cid.available("123456789112345678921"));
+    }
+
     function test_Committed_RegisterWithInsufficientFunds_RevertInsufficientFunds()
         public
     {
@@ -208,9 +233,7 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
         assertEq(address(treasuryAddress).balance, registerCost + bidFee);
     }
 
-    function test_NameAfterGracePeriod_BidAtRound0WithWrongWallet_RevertRefundFail()
-        public
-    {
+    function test_NameAfterGracePeriod_BidAtRound1_Success() public {
         cid.commit(commitmentWithPreData);
         vm.warp(startTs + 61 seconds);
         cid.register{ value: 1 ether }(
@@ -220,14 +243,55 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
             1,
             preData
         );
+        uint256 registerCost = stableFeeMw.getPriceWeiAt("alice", 1, 1);
 
-        vm.stopPrank();
-        vm.startPrank(mockWalletAddress);
         uint256 baseFee = stableFeeMw.getPriceWei("alice", 1);
-        uint256 bidFee = baseFee + 1000 ether;
-        vm.warp(startTs + 61 seconds + 365 days + 30 days);
-        vm.expectRevert("REFUND_FAILED");
+        uint256 bidFee = 899995021729403941000 wei + baseFee;
+        uint256 bidTs = startTs +
+            61 seconds +
+            365 days +
+            30 days +
+            4605 seconds *
+            1;
+        vm.warp(bidTs);
+        vm.expectEmit(true, true, true, true);
+        emit Bid("alice", bidTs + 365 days, bidFee);
+        // round 1 cost base fee + 900 eth, overpay 1 eth on purpose to test refund
         cid.bid{ value: bidFee + 1 ether }(bobAddress, "alice", "");
+        uint256 tokenId = cid.getTokenId("alice");
+        assertEq(cid.ownerOf(tokenId), bobAddress);
+        assertEq(aliceAddress.balance, startBalance - registerCost - bidFee);
+        assertEq(address(treasuryAddress).balance, registerCost + bidFee);
+    }
+
+    function test_NameAfterGracePeriod_BidAtRound393_Success() public {
+        cid.commit(commitmentWithPreData);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }(
+            "alice",
+            aliceAddress,
+            secret,
+            1,
+            preData
+        );
+        uint256 registerCost = stableFeeMw.getPriceWeiAt("alice", 1, 1);
+
+        uint256 baseFee = stableFeeMw.getPriceWei("alice", 1);
+        uint256 bidFee = 1000 wei + baseFee;
+        uint256 bidTs = startTs +
+            61 seconds +
+            365 days +
+            30 days +
+            4605 seconds *
+            393;
+        vm.warp(bidTs);
+        vm.expectEmit(true, true, true, true);
+        emit Bid("alice", bidTs + 365 days, bidFee);
+        cid.bid{ value: bidFee + 1 ether }(bobAddress, "alice", "");
+        uint256 tokenId = cid.getTokenId("alice");
+        assertEq(cid.ownerOf(tokenId), bobAddress);
+        assertEq(aliceAddress.balance, startBalance - registerCost - bidFee);
+        assertEq(address(treasuryAddress).balance, registerCost + bidFee);
     }
 
     function test_NameAfterGracePeriod_BidAtRound394_Success() public {
@@ -248,17 +312,38 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
             61 seconds +
             365 days +
             30 days +
-            8 hours *
+            4605 seconds *
             394;
         vm.warp(bidTs);
         vm.expectEmit(true, true, true, true);
         emit Bid("alice", bidTs + 365 days, bidFee);
-        // round 0 cost base fee + 1000 eth, overpay 1 eth on purpose to test refund
         cid.bid{ value: bidFee + 1 ether }(bobAddress, "alice", "");
         uint256 tokenId = cid.getTokenId("alice");
         assertEq(cid.ownerOf(tokenId), bobAddress);
         assertEq(aliceAddress.balance, startBalance - registerCost - bidFee);
         assertEq(address(treasuryAddress).balance, registerCost + bidFee);
+    }
+
+    function test_NameAfterGracePeriod_BidAtRound0WithWrongWallet_RevertRefundFail()
+        public
+    {
+        cid.commit(commitmentWithPreData);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }(
+            "alice",
+            aliceAddress,
+            secret,
+            1,
+            preData
+        );
+
+        vm.stopPrank();
+        vm.startPrank(mockWalletAddress);
+        uint256 baseFee = stableFeeMw.getPriceWei("alice", 1);
+        uint256 bidFee = baseFee + 1000 ether;
+        vm.warp(startTs + 61 seconds + 365 days + 30 days);
+        vm.expectRevert("REFUND_FAILED");
+        cid.bid{ value: bidFee + 1 ether }(bobAddress, "alice", "");
     }
 
     /* solhint-disable func-name-mixedcase */

@@ -7,6 +7,7 @@ import "../../src/core/CyberId.sol";
 import { MockWallet } from "../utils/MockWallet.sol";
 import { DataTypes } from "../../src/libraries/DataTypes.sol";
 import { CyberIdTestBase } from "../utils/CyberIdTestBase.sol";
+import { MockMiddleware } from "../utils/MockMiddleware.sol";
 
 /**
  * @dev All test names follow the pattern of "test_[GIVEN]_[WHEN]_[THEN]"
@@ -392,6 +393,17 @@ contract CyberIdTest is CyberIdTestBase {
         cid.clearMetadatas(tokenId);
         assertEq(cid.getMetadata(tokenId, "1"), "1");
         assertEq(cid.getMetadata(tokenId, "2"), "2");
+    }
+
+    function test_MiddlewareNotSet_SetMiddleware_Success() public {
+        assertEq(cid.middleware(), address(0));
+        MockMiddleware middleware = new MockMiddleware();
+        cid.setMiddleware(address(middleware), bytes("0x1234"));
+        assertEq(cid.middleware(), address(middleware));
+        assertEq(middleware.mwData(), bytes("0x1234"));
+
+        cid.setMiddleware(address(0), "");
+        assertEq(cid.middleware(), address(0));
     }
 
     /* solhint-disable func-name-mixedcase */
