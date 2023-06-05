@@ -6,6 +6,8 @@ const writeAbi = async () => {
     "CyberId.sol/CyberId.json",
     "MocaId.sol/MocaId.json",
     "PermissionMw.sol/PermissionMw.json",
+    "StableFeeMiddleware.sol/StableFeeMiddleware.json",
+    "TrustOnlyMiddleware.sol/TrustOnlyMiddleware.json",
   ];
   const ps = folders.map(async (file) => {
     const f = await fs.readFile(path.join("./out", file), "utf8");

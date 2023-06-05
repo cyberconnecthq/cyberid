@@ -94,8 +94,11 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
 
     constructor(
         string memory _name,
-        string memory _symbol
-    ) ERC721(_name, _symbol) {}
+        string memory _symbol,
+        address _owner
+    ) ERC721(_name, _symbol) {
+        _transferOwnership(_owner);
+    }
 
     /*//////////////////////////////////////////////////////////////
                             REGISTRATION LOGIC

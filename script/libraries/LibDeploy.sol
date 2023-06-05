@@ -11,6 +11,8 @@ import { LibString } from "../../src/libraries/LibString.sol";
 import { Create2Deployer } from "../../src/deployer/Create2Deployer.sol";
 import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { PermissionMw } from "../../src/middlewares/PermissionMw.sol";
+import { StableFeeMiddleware } from "../../src/middlewares/StableFeeMiddleware.sol";
+import { TrustOnlyMiddleware } from "../../src/middlewares/TrustOnlyMiddleware.sol";
 
 library LibDeploy {
     // create2 deploy all contract with this protocol salt
@@ -81,12 +83,28 @@ library LibDeploy {
         cyberId = dc.deploy(
             abi.encodePacked(
                 type(CyberId).creationCode,
-                abi.encode("CYBER ID", "CYBERID", params.usdOracle)
+                abi.encode("CYBER ID", "CYBERID", msg.sender)
             ),
             SALT
         );
 
         _write(vm, "CyberId", cyberId);
+
+        address stableFeeMw = address(
+            new StableFeeMiddleware(params.usdOracle, cyberId)
+        );
+        _write(vm, "StableFeeMiddleware", stableFeeMw);
+
+        CyberId(cyberId).setMiddleware(
+            stableFeeMw,
+            abi.encode(
+                msg.sender,
+                [uint256(0), 0, 20294266869609, 5073566717402, 158548959919]
+            )
+        );
+
+        address trustOnlyMw = address(new TrustOnlyMiddleware(cyberId));
+        _write(vm, "TrustOnlyMiddleware", trustOnlyMw);
     }
 
     function deployMocaId(

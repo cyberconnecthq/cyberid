@@ -35,7 +35,7 @@ abstract contract CyberIdTestBase is Test {
 
     function setUp() public virtual {
         vm.startPrank(aliceAddress);
-        cid = new CyberId("CYBER ID", "CYBERID");
+        cid = new CyberId("CYBER ID", "CYBERID", aliceAddress);
         // set timestamp to startTs
         vm.warp(startTs);
         vm.deal(aliceAddress, startBalance);
