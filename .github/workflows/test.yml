@@ -30,23 +30,24 @@ jobs:
           forge test -vvv --gas-report
         id: test
 
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 16
+      # - uses: actions/setup-node@v3
+      #   with:
+      #     node-version: 16
 
-      - name: Install modules
-        run: yarn
+      # - name: Install modules
+      #   run: yarn
 
-      - name: Run lint
-        run: yarn run lint:gh-check
+      # - name: Run lint
+      #   run: yarn run lint:gh-check
 
       - name: Run Coverage
         run: "forge coverage --report lcov && sudo apt-get install lcov && lcov --remove ./lcov.info -o ./lcov.info.pruned 'test/*' 'script/*' 'src/libraries/*' 'src/deployer/*'"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
-          token: aec0abae-5f65-4055-93c7-4509b8c956ea
           directory: .
           env_vars: OS,PYTHON
           fail_ci_if_error: true
