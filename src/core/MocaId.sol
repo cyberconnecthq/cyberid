@@ -32,12 +32,19 @@ contract MocaId is
     /**
      * @notice Token URI prefix.
      */
-    string public baseTokenUri;
+    string public baseTokenURI;
 
     /**
      * @notice Middleware contract that processes before and after the registration.
      */
     address public middleware;
+
+    /**
+     * @notice The allowed parent nodes of the mocaId.
+     * e.g. namehash('moca'), namehash('music')
+     * https://eips.ethereum.org/EIPS/eip-137
+     */
+    mapping(bytes32 => bool) public allowedParentNodes;
 
     /**
      * @notice The number of mocaIds minted.
@@ -46,7 +53,10 @@ contract MocaId is
 
     string internal constant _MOCA_XP_KEY = "MXP";
 
-    bytes32 internal constant _OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
+    bytes32 internal constant _OPERATOR_ROLE =
+        keccak256(bytes("OPERATOR_ROLE"));
+
+    uint256 internal constant _MAX_XP = 1e77 - 1;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -54,12 +64,34 @@ contract MocaId is
 
     /**
      * @dev Emit an event when a mocaId is registered.
+     * For example, when "user.moca" is registered, the name is "user" and the parent node is namehash("moca").
      *
-     * @param mocaId  The mocaId
-     * @param tokenId The tokenId of the mocaId
-     * @param to      The address that owns the mocaId
+     * @param name         The name of the mocaId
+     * @param parentNode   The parent node of the mocaId
+     * @param tokenId      The tokenId of the mocaId
+     * @param to           The address that owns the mocaId
      */
-    event Register(string mocaId, uint256 indexed tokenId, address indexed to);
+    event Register(
+        string name,
+        bytes32 parentNode,
+        uint256 indexed tokenId,
+        address indexed to
+    );
+
+    /**
+     * @dev Emit an event when a node allowance changed.
+     *
+     * @param node       The node
+     * @param label      The label of the node
+     * @param parentNode The parent node of the node
+     * @param allowed    The new state of allowance
+     */
+    event NodeAllowanceChanged(
+        bytes32 indexed node,
+        string label,
+        bytes32 parentNode,
+        bool allowed
+    );
 
     /*//////////////////////////////////////////////////////////////
                         CONSTRUCTORS AND INITIALIZERS
@@ -100,14 +132,18 @@ contract MocaId is
     /**
      * @notice Checks if a mocaId is available for registration.
      *
-     * @param mocaId The mocaId to register
+     * @param _name       The name to check
+     * @param parentNode The parent node of the mocaId
      */
-    function available(string calldata mocaId) public view returns (bool) {
-        bytes32 label = keccak256(bytes(mocaId));
-        uint256 tokenId = uint256(label);
+    function available(
+        string calldata _name,
+        bytes32 parentNode
+    ) public view returns (bool) {
+        require(allowedParentNodes[parentNode], "NODE_NOT_ALLOWED");
+        uint256 tokenId = getTokenId(_name, parentNode);
         if (!_exists(tokenId)) {
             if (middleware != address(0)) {
-                return IMiddleware(middleware).namePatternValid(mocaId);
+                return IMiddleware(middleware).namePatternValid(_name);
             } else {
                 return true;
             }
@@ -118,21 +154,24 @@ contract MocaId is
     /**
      * @notice Mints a new mocaId.
      *
-     * @param mocaId    The mocaId to register
-     * @param to        The address that will own the mocaId
-     * @param preData   The register data for preprocess.
+     * @param _name       The name to register
+     * @param parentNode The parent node of the mocaId
+     * @param to         The address that will own the mocaId
+     * @param preData    The register data for preprocess.
+     * @return uint256   Minted tokenId
      */
     function register(
-        string calldata mocaId,
+        string calldata _name,
+        bytes32 parentNode,
         address to,
         bytes calldata preData
-    ) external {
+    ) external returns (uint256) {
         if (middleware != address(0)) {
             DataTypes.RegisterNameParams memory params = DataTypes
-                .RegisterNameParams(msg.sender, mocaId, to);
+                .RegisterNameParams(msg.sender, _name, parentNode, to);
             IMiddleware(middleware).preProcess(params, preData);
         }
-        _register(mocaId, to);
+        return _register(_name, parentNode, to);
     }
 
     /**
@@ -192,7 +231,7 @@ contract MocaId is
         uint256 tokenId
     ) public view override returns (string memory) {
         require(_exists(tokenId), "INVALID_TOKEN_ID");
-        return string(abi.encodePacked(baseTokenUri, tokenId.toHexString()));
+        return string(abi.encodePacked(baseTokenURI, tokenId.toString()));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -200,14 +239,18 @@ contract MocaId is
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Gets token id of the gievn moca id string.
+     * @notice Gets token id of the gievn name and parent node.
      *
      * @return uint256 The token id.
      */
     function getTokenId(
-        string calldata mocaId
-    ) external pure returns (uint256) {
-        return uint256(keccak256(bytes(mocaId)));
+        string calldata _name,
+        bytes32 parentNode
+    ) public pure returns (uint256) {
+        bytes32 nodehash = keccak256(
+            abi.encodePacked(parentNode, keccak256(bytes(_name)))
+        );
+        return uint256(nodehash);
     }
 
     /**
@@ -224,8 +267,12 @@ contract MocaId is
      * @param tokenId The token id.
      * @return string The moca xp.
      */
-    function getMocaXP(uint256 tokenId) external view returns (string memory) {
-        return this.getGatedMetadata(tokenId, _MOCA_XP_KEY);
+    function getMocaXP(uint256 tokenId) external view returns (uint256) {
+        string memory mocaXp = getGatedMetadata(tokenId, _MOCA_XP_KEY);
+        if (bytes(mocaXp).length == 0) {
+            return 0;
+        }
+        return LibString.stringToUint256(mocaXp);
     }
 
     /**
@@ -252,10 +299,10 @@ contract MocaId is
     /**
      * @notice Sets the base token uri.
      */
-    function setBaseTokenUri(
+    function setbaseTokenURI(
         string calldata uri
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        baseTokenUri = uri;
+        baseTokenURI = uri;
     }
 
     /**
@@ -292,10 +339,29 @@ contract MocaId is
     /**
      * @notice Sets the moca xp.
      */
-    function setMocaXP(uint256 tokenId, string calldata xp) external {
+    function setMocaXP(uint256 tokenId, uint256 xp) external {
+        require(xp <= _MAX_XP, "XP_TOO_BIG");
         DataTypes.MetadataPair[] memory pairs = new DataTypes.MetadataPair[](1);
-        pairs[0] = DataTypes.MetadataPair(_MOCA_XP_KEY, xp);
-        this.batchSetGatedMetadatas(tokenId, pairs);
+        pairs[0] = DataTypes.MetadataPair(_MOCA_XP_KEY, xp.toString());
+        batchSetGatedMetadatas(tokenId, pairs);
+    }
+
+    /**
+     * @notice allows node. E.g. '.moca', '.music'.
+     * So that users can register mocaId like 'abc.moca', 'abc.music'.
+     * @dev allowNode("moca", bytes32(0)) to allow ".moca"
+     */
+    function allowNode(
+        string calldata label,
+        bytes32 parentNode,
+        bool allow
+    ) external onlyRole(_OPERATOR_ROLE) returns (bytes32 allowedNode) {
+        allowedNode = keccak256(
+            abi.encodePacked(parentNode, keccak256(bytes(label)))
+        );
+        allowedParentNodes[allowedNode] = allow;
+        emit NodeAllowanceChanged(allowedNode, label, parentNode, allow);
+        return allowedNode;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -307,14 +373,17 @@ contract MocaId is
         require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "NOT_ADMIN");
     }
 
-    function _register(string calldata mocaId, address to) internal {
-        require(available(mocaId), "NAME_NOT_AVAILABLE");
-
-        bytes32 label = keccak256(bytes(mocaId));
-        uint256 tokenId = uint256(label);
+    function _register(
+        string calldata _name,
+        bytes32 parentNode,
+        address to
+    ) internal returns (uint256) {
+        require(available(_name, parentNode), "NAME_NOT_AVAILABLE");
+        uint256 tokenId = getTokenId(_name, parentNode);
         super._safeMint(to, tokenId);
         ++_mintCount;
-        emit Register(mocaId, tokenId, to);
+        emit Register(_name, parentNode, tokenId, to);
+        return tokenId;
     }
 
     function _isMetadataAuthorised(
@@ -324,8 +393,9 @@ contract MocaId is
     }
 
     function _isGatedMetadataAuthorised(
-        uint256
+        uint256 tokenId
     ) internal view override returns (bool) {
+        require(_exists(tokenId), "TOKEN_NOT_MINTED");
         return hasRole(_OPERATOR_ROLE, msg.sender);
     }
 }

@@ -107,7 +107,7 @@ abstract contract MetadataResolver is Initializable {
      */
     function batchSetGatedMetadatas(
         uint256 tokenId,
-        DataTypes.MetadataPair[] calldata pairs
+        DataTypes.MetadataPair[] memory pairs
     ) public gatedAuthorised(tokenId) {
         for (uint256 i = 0; i < pairs.length; i++) {
             DataTypes.MetadataPair memory pair = pairs[i];
@@ -139,7 +139,7 @@ abstract contract MetadataResolver is Initializable {
      */
     function getGatedMetadata(
         uint256 tokenId,
-        string calldata key
+        string memory key
     ) public view returns (string memory) {
         return _gatedMetadatas[gatedMetadataVersions[tokenId]][tokenId][key];
     }

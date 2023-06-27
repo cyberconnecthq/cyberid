@@ -24,21 +24,21 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
     /* solhint-disable func-name-mixedcase */
     function test_NameNotRegistered_CheckNameAvailable_Available() public {
         // 1 letter
-        assertTrue(mid.available("1"));
+        assertTrue(mid.available("1", mocaNode));
         // 20 letters
-        assertTrue(mid.available("123456789abcdefghiz_"));
+        assertTrue(mid.available("123456789abcdefghiz_", mocaNode));
         // utf8 characters
-        assertFalse(mid.available(unicode"中文"));
+        assertFalse(mid.available(unicode"中文", mocaNode));
         // utf8 characters
-        assertFalse(mid.available(unicode"😋"));
+        assertFalse(mid.available(unicode"😋", mocaNode));
         // 0 letter
-        assertFalse(mid.available(""));
+        assertFalse(mid.available("", mocaNode));
         // space
-        assertFalse(mid.available(" "));
+        assertFalse(mid.available(" ", mocaNode));
         // dash
-        assertFalse(mid.available("-"));
+        assertFalse(mid.available("-", mocaNode));
         // 21 letters
-        assertFalse(mid.available("123456789abcdefghiz_1"));
+        assertFalse(mid.available("123456789abcdefghiz_1", mocaNode));
     }
 
     function test_MiddlewareCreated_SetDataFromNonNameRegistry_RevertUnauthorized()
@@ -70,10 +70,20 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceSk, digest);
 
         vm.expectEmit(true, true, true, true);
-        emit Transfer(address(0), aliceAddress, mid.getTokenId(name));
+        emit Transfer(address(0), aliceAddress, mid.getTokenId(name, mocaNode));
         vm.expectEmit(true, true, true, true);
-        emit Register(name, mid.getTokenId(name), aliceAddress);
-        mid.register(name, aliceAddress, abi.encode(v, r, s, deadline));
+        emit Register(
+            name,
+            mocaNode,
+            mid.getTokenId(name, mocaNode),
+            aliceAddress
+        );
+        mid.register(
+            name,
+            mocaNode,
+            aliceAddress,
+            abi.encode(v, r, s, deadline)
+        );
     }
 
     function test_NameRegistered_RegisterUsingSameSig_RevertInvalidSig()
@@ -97,9 +107,19 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
         );
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceSk, digest);
 
-        mid.register(name, aliceAddress, abi.encode(v, r, s, deadline));
+        mid.register(
+            name,
+            mocaNode,
+            aliceAddress,
+            abi.encode(v, r, s, deadline)
+        );
         vm.expectRevert("INVALID_SIGNATURE");
-        mid.register(name, aliceAddress, abi.encode(v, r, s, deadline));
+        mid.register(
+            name,
+            mocaNode,
+            aliceAddress,
+            abi.encode(v, r, s, deadline)
+        );
     }
 
     function test_NameNotRegistered_SigDeadlineExceeded_RevertDeadlineExceeded()
@@ -124,7 +144,12 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceSk, digest);
 
         vm.expectRevert("DEADLINE_EXCEEDED");
-        mid.register(name, aliceAddress, abi.encode(v, r, s, deadline));
+        mid.register(
+            name,
+            mocaNode,
+            aliceAddress,
+            abi.encode(v, r, s, deadline)
+        );
     }
 
     function test_NameNotRegistered_RegisterWithWrongSigner_RevertInvalidSig()
@@ -149,7 +174,12 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(bobSk, digest);
 
         vm.expectRevert("INVALID_SIGNATURE");
-        mid.register(name, aliceAddress, abi.encode(v, r, s, deadline));
+        mid.register(
+            name,
+            mocaNode,
+            aliceAddress,
+            abi.encode(v, r, s, deadline)
+        );
     }
 
     function test_NameNotRegistered_RegisterWithWrongTo_RevertInvalidSig()
@@ -174,7 +204,12 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceSk, digest);
 
         vm.expectRevert("INVALID_SIGNATURE");
-        mid.register(name, aliceAddress, abi.encode(v, r, s, deadline));
+        mid.register(
+            name,
+            mocaNode,
+            aliceAddress,
+            abi.encode(v, r, s, deadline)
+        );
     }
 
     function test_NameNotRegistered_RegisterWithWrongName_RevertInvalidSig()
@@ -199,7 +234,12 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceSk, digest);
 
         vm.expectRevert("INVALID_SIGNATURE");
-        mid.register(name, aliceAddress, abi.encode(v, r, s, deadline));
+        mid.register(
+            name,
+            mocaNode,
+            aliceAddress,
+            abi.encode(v, r, s, deadline)
+        );
     }
 
     function test_NameNotRegistered_RegisterWithWrongNonce_RevertInvalidSig()
@@ -224,7 +264,12 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceSk, digest);
 
         vm.expectRevert("INVALID_SIGNATURE");
-        mid.register(name, aliceAddress, abi.encode(v, r, s, deadline));
+        mid.register(
+            name,
+            mocaNode,
+            aliceAddress,
+            abi.encode(v, r, s, deadline)
+        );
     }
     /* solhint-disable func-name-mixedcase */
 }

@@ -15,8 +15,14 @@ abstract contract MocaIdTestBase is Test {
     // 2023-05-22T17:25:30
     uint256 public startTs = 1684747530;
     uint256 public startBalance = 2000 ether;
+    bytes32 public mocaNode;
 
-    event Register(string mocaId, uint256 indexed tokenId, address indexed to);
+    event Register(
+        string name,
+        bytes32 parentNode,
+        uint256 indexed tokenId,
+        address indexed to
+    );
     event Transfer(
         address indexed from,
         address indexed to,
@@ -35,9 +41,13 @@ abstract contract MocaIdTestBase is Test {
                 aliceAddress
             )
         );
+
         vm.stopPrank();
         vm.startPrank(aliceAddress);
         mid = MocaId(address(proxy));
+        mid.grantRole(keccak256("OPERATOR_ROLE"), aliceAddress);
+        mocaNode = mid.allowNode("moca", bytes32(0), true);
+
         // set timestamp to startTs
         vm.warp(startTs);
         vm.deal(aliceAddress, startBalance);

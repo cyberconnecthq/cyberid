@@ -7,58 +7,110 @@ import { MockMiddleware } from "../utils/MockMiddleware.sol";
 import { DataTypes } from "../../src/libraries/DataTypes.sol";
 import { MocaId } from "../../src/core/MocaId.sol";
 
+import "forge-std/console.sol";
+
 /**
  * @dev All test names follow the pattern of "test_[GIVEN]_[WHEN]_[THEN]"
  */
 contract MocaIdTest is MocaIdTestBase {
     /* solhint-disable func-name-mixedcase */
     function test_MiddlewareNotSet_CheckNameAvailable_Available() public {
-        assertTrue(mid.available(unicode"alice"));
-        assertTrue(mid.available(unicode"bob"));
-        assertTrue(mid.available(unicode"bobb"));
-        assertTrue(mid.available(unicode"三个字"));
-        assertTrue(mid.available(unicode"四个字儿"));
-        assertTrue(mid.available(unicode"😋😋😋"));
-        assertTrue(mid.available(unicode"😋😋😋😋"));
-        assertTrue(mid.available(unicode"    "));
-        assertTrue(mid.available(unicode""));
-        assertTrue(mid.available(unicode"bo"));
-        assertTrue(mid.available(unicode"二字"));
-        assertTrue(mid.available(unicode"😋😋"));
-        assertTrue(mid.available("zerowidthcharacter\u200a\u200b"));
-        assertTrue(mid.available("zerowidthcharacter\u200a\u200c"));
-        assertTrue(mid.available("zerowidthcharacter\u200a\u200d"));
-        assertTrue(mid.available("zerowidthcharacter\ufefe\ufeff"));
+        assertTrue(mid.available(unicode"alice", mocaNode));
+        assertTrue(mid.available(unicode"bob", mocaNode));
+        assertTrue(mid.available(unicode"bobb", mocaNode));
+        assertTrue(mid.available(unicode"三个字", mocaNode));
+        assertTrue(mid.available(unicode"四个字儿", mocaNode));
+        assertTrue(mid.available(unicode"😋😋😋", mocaNode));
+        assertTrue(mid.available(unicode"😋😋😋😋", mocaNode));
+        assertTrue(mid.available(unicode"    ", mocaNode));
+        assertTrue(mid.available(unicode"", mocaNode));
+        assertTrue(mid.available(unicode"bo", mocaNode));
+        assertTrue(mid.available(unicode"二字", mocaNode));
+        assertTrue(mid.available(unicode"😋😋", mocaNode));
+        assertTrue(mid.available("zerowidthcharacter\u200a\u200b", mocaNode));
+        assertTrue(mid.available("zerowidthcharacter\u200a\u200c", mocaNode));
+        assertTrue(mid.available("zerowidthcharacter\u200a\u200d", mocaNode));
+        assertTrue(mid.available("zerowidthcharacter\ufefe\ufeff", mocaNode));
+    }
+
+    function test_NodeNotAllowed_CheckNameAvailable_NotAvailable() public {
+        bytes32 musicNode = keccak256(
+            abi.encodePacked(bytes32(0), keccak256(bytes("music")))
+        );
+        vm.expectRevert("NODE_NOT_ALLOWED");
+        mid.available("alice", musicNode);
+    }
+
+    function test_NodeNotAllowed_AllowNodeAndCheckNameAvailable_Available()
+        public
+    {
+        bytes32 musicNode = mid.allowNode("music", bytes32(0), true);
+        assertTrue(mid.available("alice", musicNode));
     }
 
     function test_MiddlewareNotSet_RegisterName_Success() public {
         string memory name = "test";
 
         vm.expectEmit(true, true, true, true);
-        emit Transfer(address(0), aliceAddress, mid.getTokenId(name));
+        emit Transfer(address(0), aliceAddress, mid.getTokenId(name, mocaNode));
         vm.expectEmit(true, true, true, true);
-        emit Register(name, mid.getTokenId(name), aliceAddress);
-        mid.register(name, aliceAddress, "");
+        emit Register(
+            name,
+            mocaNode,
+            mid.getTokenId(name, mocaNode),
+            aliceAddress
+        );
+        mid.register(name, mocaNode, aliceAddress, "");
     }
 
     function test_NameRegistered_RegisterAgain_RevertNameNotAvailable() public {
         string memory name = "test";
-        mid.register(name, aliceAddress, "");
+        mid.register(name, mocaNode, aliceAddress, "");
         vm.expectRevert("NAME_NOT_AVAILABLE");
-        mid.register(name, aliceAddress, "");
+        mid.register(name, mocaNode, aliceAddress, "");
     }
 
     function test_NameRegistered_QueryAvailable_NotAvailable() public {
-        assertTrue(mid.available("test"));
+        assertTrue(mid.available("test", mocaNode));
         string memory name = "test";
-        mid.register(name, aliceAddress, "");
-        assertFalse(mid.available("test"));
+        mid.register(name, mocaNode, aliceAddress, "");
+        assertFalse(mid.available("test", mocaNode));
     }
 
     function test_NameRegistered_Transfer_RevertNowAllowed() public {
         string memory name = "test";
-        mid.register(name, aliceAddress, "");
-        uint256 tokenId = mid.getTokenId(name);
+        uint256 tokenId = mid.register(name, mocaNode, aliceAddress, "");
+        vm.expectRevert("TRANSFER_NOT_ALLOWED");
+        mid.transferFrom(aliceAddress, bobAddress, tokenId);
+        vm.expectRevert("TRANSFER_NOT_ALLOWED");
+        mid.safeTransferFrom(aliceAddress, bobAddress, tokenId);
+        vm.expectRevert("TRANSFER_NOT_ALLOWED");
+        mid.safeTransferFrom(aliceAddress, bobAddress, tokenId, "");
+    }
+
+    function test_Unpause_Transfer_Success() public {
+        string memory name = "test";
+        uint256 tokenId = mid.register(name, mocaNode, aliceAddress, "");
+        mid.unpause();
+        mid.transferFrom(aliceAddress, bobAddress, tokenId);
+        assertEq(mid.ownerOf(tokenId), bobAddress);
+
+        vm.stopPrank();
+        vm.startPrank(bobAddress);
+        mid.safeTransferFrom(bobAddress, aliceAddress, tokenId);
+        assertEq(mid.ownerOf(tokenId), aliceAddress);
+
+        vm.stopPrank();
+        vm.startPrank(aliceAddress);
+        mid.safeTransferFrom(aliceAddress, bobAddress, tokenId, "");
+        assertEq(mid.ownerOf(tokenId), bobAddress);
+    }
+
+    function test_UnpauseAndPause_Transfer_RevertNowAllowed() public {
+        test_Unpause_Transfer_Success();
+        mid.pause();
+        string memory name = "test";
+        uint256 tokenId = mid.getTokenId(name, mocaNode);
         vm.expectRevert("TRANSFER_NOT_ALLOWED");
         mid.transferFrom(aliceAddress, bobAddress, tokenId);
         vm.expectRevert("TRANSFER_NOT_ALLOWED");
@@ -71,36 +123,34 @@ contract MocaIdTest is MocaIdTestBase {
         string memory name = "test";
         assertEq(0, mid.totalSupply());
 
-        mid.register(name, aliceAddress, "");
+        uint256 tokenId = mid.register(name, mocaNode, aliceAddress, "");
         assertEq(1, mid.totalSupply());
 
-        mid.burn(mid.getTokenId(name));
+        mid.burn(tokenId);
         assertEq(0, mid.totalSupply());
 
-        mid.register(name, aliceAddress, "");
+        mid.register(name, mocaNode, aliceAddress, "");
         assertEq(1, mid.totalSupply());
     }
 
     function test_BaseUriNotSet_TokenUri_Success() public {
-        mid.register("alice", aliceAddress, "");
-        uint256 tokenId = mid.getTokenId("alice");
+        uint256 tokenId = mid.register("alice", mocaNode, aliceAddress, "");
         assertEq(
             mid.tokenURI(tokenId),
-            "0x9c0257114eb9399a2985f8e75dad7600c5d89fe3824ffa99ec1c3eb8bf3b0501"
+            "34381505080506270002041962522073071494230304175856376258432815400806256652646"
         );
     }
 
     function test_BaseUriSet_TokenUri_Success() public {
-        mid.register("alice", aliceAddress, "");
+        uint256 tokenId = mid.register("alice", mocaNode, aliceAddress, "");
         string memory baseUri = "https://api.cyberconnect.dev/";
-        mid.setBaseTokenUri(baseUri);
-        uint256 tokenId = mid.getTokenId("alice");
+        mid.setbaseTokenURI(baseUri);
         assertEq(
             mid.tokenURI(tokenId),
             string(
                 abi.encodePacked(
                     baseUri,
-                    "0x9c0257114eb9399a2985f8e75dad7600c5d89fe3824ffa99ec1c3eb8bf3b0501"
+                    "34381505080506270002041962522073071494230304175856376258432815400806256652646"
                 )
             )
         );
@@ -123,9 +173,8 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_NameRegistered_SetMetadata_ReadSuccess() public {
-        mid.register("alice", aliceAddress, "");
+        uint256 tokenId = mid.register("alice", mocaNode, aliceAddress, "");
 
-        uint256 tokenId = mid.getTokenId("alice");
         string memory avatarKey = "avatar";
         string
             memory avatarValue = "ipfs://Qmb5YRL6hjutLUF2dw5V5WGjQCip4e1WpRo8w3iFss4cWB";
@@ -140,7 +189,7 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_NameNotRegistered_SetMetadata_RevertInvalidToken() public {
-        uint256 tokenId = mid.getTokenId("alice");
+        uint256 tokenId = mid.getTokenId("alice", mocaNode);
         string memory avatarKey = "avatar";
         string
             memory avatarValue = "ipfs://Qmb5YRL6hjutLUF2dw5V5WGjQCip4e1WpRo8w3iFss4cWB";
@@ -152,9 +201,8 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_MetadataSet_ClearMetadata_ReadSuccess() public {
-        mid.register("alice", aliceAddress, "");
+        uint256 tokenId = mid.register("alice", mocaNode, aliceAddress, "");
 
-        uint256 tokenId = mid.getTokenId("alice");
         DataTypes.MetadataPair[]
             memory metadatas = new DataTypes.MetadataPair[](2);
         metadatas[0] = DataTypes.MetadataPair("1", "1");
@@ -168,9 +216,8 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_MetadataSet_ClearMetadataByOthers_RevertUnAuth() public {
-        mid.register("alice", aliceAddress, "");
+        uint256 tokenId = mid.register("alice", mocaNode, aliceAddress, "");
 
-        uint256 tokenId = mid.getTokenId("alice");
         DataTypes.MetadataPair[]
             memory metadatas = new DataTypes.MetadataPair[](2);
         metadatas[0] = DataTypes.MetadataPair("1", "1");
@@ -186,8 +233,110 @@ contract MocaIdTest is MocaIdTestBase {
         assertEq(mid.getMetadata(tokenId, "2"), "2");
     }
 
+    function test_NameRegistered_SetGatedMetadata_ReadSuccess() public {
+        uint256 tokenId = mid.register("alice", mocaNode, aliceAddress, "");
+
+        string memory avatarKey = "avatar";
+        string
+            memory avatarValue = "ipfs://Qmb5YRL6hjutLUF2dw5V5WGjQCip4e1WpRo8w3iFss4cWB";
+        DataTypes.MetadataPair[]
+            memory metadatas = new DataTypes.MetadataPair[](1);
+        metadatas[0] = DataTypes.MetadataPair(avatarKey, avatarValue);
+        mid.batchSetGatedMetadatas(tokenId, metadatas);
+        assertEq(avatarValue, mid.getGatedMetadata(tokenId, avatarKey));
+        metadatas[0] = DataTypes.MetadataPair(avatarKey, unicode"中文");
+        mid.batchSetGatedMetadatas(tokenId, metadatas);
+        assertEq(unicode"中文", mid.getGatedMetadata(tokenId, avatarKey));
+    }
+
+    function test_NameNotRegistered_SetGatedMetadata_RevertInvalidToken()
+        public
+    {
+        uint256 tokenId = mid.getTokenId("alice", mocaNode);
+        string memory avatarKey = "avatar";
+        string
+            memory avatarValue = "ipfs://Qmb5YRL6hjutLUF2dw5V5WGjQCip4e1WpRo8w3iFss4cWB";
+        DataTypes.MetadataPair[]
+            memory metadatas = new DataTypes.MetadataPair[](1);
+        metadatas[0] = DataTypes.MetadataPair(avatarKey, avatarValue);
+        vm.expectRevert("TOKEN_NOT_MINTED");
+        mid.batchSetGatedMetadatas(tokenId, metadatas);
+    }
+
+    function test_GatedMetadataSet_ClearGatedMetadata_ReadSuccess() public {
+        uint256 tokenId = mid.register("alice", mocaNode, aliceAddress, "");
+
+        DataTypes.MetadataPair[]
+            memory metadatas = new DataTypes.MetadataPair[](2);
+        metadatas[0] = DataTypes.MetadataPair("1", "1");
+        metadatas[1] = DataTypes.MetadataPair("2", "2");
+        mid.batchSetGatedMetadatas(tokenId, metadatas);
+        assertEq(mid.getGatedMetadata(tokenId, "1"), "1");
+        assertEq(mid.getGatedMetadata(tokenId, "2"), "2");
+        mid.clearGatedMetadatas(tokenId);
+        assertEq(mid.getGatedMetadata(tokenId, "1"), "");
+        assertEq(mid.getGatedMetadata(tokenId, "2"), "");
+    }
+
+    function test_GatedMetadataSet_ClearGatedMetadataByOthers_RevertUnAuth()
+        public
+    {
+        uint256 tokenId = mid.register("alice", mocaNode, aliceAddress, "");
+
+        DataTypes.MetadataPair[]
+            memory metadatas = new DataTypes.MetadataPair[](2);
+        metadatas[0] = DataTypes.MetadataPair("1", "1");
+        metadatas[1] = DataTypes.MetadataPair("2", "2");
+        mid.batchSetGatedMetadatas(tokenId, metadatas);
+        assertEq(mid.getGatedMetadata(tokenId, "1"), "1");
+        assertEq(mid.getGatedMetadata(tokenId, "2"), "2");
+        vm.stopPrank();
+        vm.startPrank(bobAddress);
+        vm.expectRevert("GATED_METADATA_UNAUTHORISED");
+        mid.clearGatedMetadatas(tokenId);
+        assertEq(mid.getGatedMetadata(tokenId, "1"), "1");
+        assertEq(mid.getGatedMetadata(tokenId, "2"), "2");
+    }
+
+    function test_NameRegistered_OwnerSetMocaXp_RevertNotAuth() public {
+        vm.stopPrank();
+        vm.startPrank(bobAddress);
+        uint256 tokenId = mid.register("bob", mocaNode, bobAddress, "");
+        vm.expectRevert("GATED_METADATA_UNAUTHORISED");
+        mid.setMocaXP(tokenId, 100);
+    }
+
+    function test_NameRegistered_SetMocaXp_Success() public {
+        vm.stopPrank();
+        vm.startPrank(bobAddress);
+        uint256 tokenId = mid.register("bob", mocaNode, bobAddress, "");
+        uint256 mocaXp = mid.getMocaXP(tokenId);
+        assertEq(mocaXp, 0);
+
+        vm.stopPrank();
+        vm.startPrank(aliceAddress);
+        uint256 expectedXp = 1234567890;
+        mid.setMocaXP(tokenId, expectedXp);
+        mocaXp = mid.getMocaXP(tokenId);
+        assertEq(mocaXp, expectedXp);
+
+        expectedXp = 0;
+        mid.setMocaXP(tokenId, expectedXp);
+        mocaXp = mid.getMocaXP(tokenId);
+        assertEq(mocaXp, expectedXp);
+
+        expectedXp = 1e77 - 1;
+        mid.setMocaXP(tokenId, expectedXp);
+        mocaXp = mid.getMocaXP(tokenId);
+        assertEq(mocaXp, expectedXp);
+
+        expectedXp = 1e77;
+        vm.expectRevert("XP_TOO_BIG");
+        mid.setMocaXP(tokenId, expectedXp);
+    }
+
     function test_AliceIsOwner_BobUpgradeContract_ReverNotOwner() public {
-        mid.register("alice", aliceAddress, "");
+        mid.register("alice", mocaNode, aliceAddress, "");
         vm.stopPrank();
         vm.startPrank(bobAddress);
         vm.expectRevert("NOT_ADMIN");
@@ -197,10 +346,18 @@ contract MocaIdTest is MocaIdTestBase {
     function test_NameRegistered_UpgradeContract_NameIsStillRegistered()
         public
     {
-        mid.register("alice", aliceAddress, "");
+        mid.register("alice", mocaNode, aliceAddress, "");
         MocaId implV2 = new MocaId();
         mid.upgradeTo(address(implV2));
-        assertEq(mid.ownerOf(mid.getTokenId("alice")), aliceAddress);
+        assertEq(mid.ownerOf(mid.getTokenId("alice", mocaNode)), aliceAddress);
+    }
+
+    function test_CheckEIP137() public {
+        bytes32 ethNode = mid.allowNode("eth", bytes32(0), true);
+        assertEq(
+            ethNode,
+            0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae
+        );
     }
 
     /* solhint-disable func-name-mixedcase */

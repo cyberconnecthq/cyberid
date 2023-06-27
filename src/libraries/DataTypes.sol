@@ -18,6 +18,7 @@ library DataTypes {
     struct RegisterNameParams {
         address msgSender;
         string name;
+        bytes32 parentNode;
         address to;
     }
 
