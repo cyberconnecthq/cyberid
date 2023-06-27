@@ -5,10 +5,10 @@ pragma solidity 0.8.14;
 import { AggregatorV3Interface } from "chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import { FixedPointMathLib } from "solmate/src/utils/FixedPointMathLib.sol";
 
-import { ICyberIdMiddleware } from "../interfaces/ICyberIdMiddleware.sol";
+import { ICyberIdMiddleware } from "../../interfaces/ICyberIdMiddleware.sol";
 
-import { LibString } from "../libraries/LibString.sol";
-import { DataTypes } from "../libraries/DataTypes.sol";
+import { LibString } from "../../libraries/LibString.sol";
+import { DataTypes } from "../../libraries/DataTypes.sol";
 
 import { LowerCaseCyberIdMiddleware } from "./base/LowerCaseCyberIdMiddleware.sol";
 

@@ -7,7 +7,7 @@ import "../../src/core/CyberId.sol";
 import { MockWallet } from "../utils/MockWallet.sol";
 import { MockUsdOracle } from "../utils/MockUsdOracle.sol";
 import { DataTypes } from "../../src/libraries/DataTypes.sol";
-import { StableFeeMiddleware } from "../../src/middlewares/StableFeeMiddleware.sol";
+import { StableFeeMiddleware } from "../../src/middlewares/cyberid/StableFeeMiddleware.sol";
 import { CyberIdTestBase } from "../utils/CyberIdTestBase.sol";
 
 /**

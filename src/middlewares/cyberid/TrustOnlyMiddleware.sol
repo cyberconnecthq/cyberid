@@ -4,9 +4,9 @@ pragma solidity 0.8.14;
 
 import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
-import { ICyberIdMiddleware } from "../interfaces/ICyberIdMiddleware.sol";
+import { ICyberIdMiddleware } from "../../interfaces/ICyberIdMiddleware.sol";
 
-import { DataTypes } from "../libraries/DataTypes.sol";
+import { DataTypes } from "../../libraries/DataTypes.sol";
 
 import { LowerCaseCyberIdMiddleware } from "./base/LowerCaseCyberIdMiddleware.sol";
 

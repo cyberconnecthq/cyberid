@@ -4,7 +4,7 @@ pragma solidity 0.8.14;
 
 import "forge-std/Test.sol";
 import { MocaIdTestBase } from "../utils/MocaIdTestBase.sol";
-import { PermissionMw } from "../../src/middlewares/PermissionMw.sol";
+import { PermissionMw } from "../../src/middlewares/mocaid/PermissionMw.sol";
 import { Constants } from "../../src/libraries/Constants.sol";
 import { TestLib712 } from "../utils/TestLib712.sol";
 
@@ -59,6 +59,7 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
                 abi.encode(
                     Constants._REGISTER_TYPEHASH,
                     keccak256(bytes(name)),
+                    mocaNode,
                     aliceAddress,
                     0,
                     deadline
@@ -97,6 +98,7 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
                 abi.encode(
                     Constants._REGISTER_TYPEHASH,
                     keccak256(bytes(name)),
+                    mocaNode,
                     aliceAddress,
                     0,
                     deadline

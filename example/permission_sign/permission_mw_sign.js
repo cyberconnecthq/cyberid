@@ -4,10 +4,11 @@ const MocaIdAbi = require("../../docs/abi/MocaId.json");
 const PermissionMwAbi = require("../../docs/abi/PermissionMw.json");
 
 // EIP712 types
-// register(string name,address to,uint256 nonce,uint256 deadline)
+// register(string name,bytes32 parentNode,address to,uint256 nonce,uint256 deadline)
 const types = {
   register: [
     { name: "name", type: "string" },
+    { name: "parentNode", type: "bytes32" },
     { name: "to", type: "address" },
     { name: "nonce", type: "uint256" },
     { name: "deadline", type: "uint256" },
@@ -17,8 +18,8 @@ const types = {
 // *** IMPORTANT ***
 // update below values to correct values
 // ------------- contract addresses -------------
-const MocaIdAddress = "0x1622b8d366c530635c0072ba969a23c9bde845a5";
-const PermissionMwAddress = "0xcaeef6a356e83add13025e9dd8a90ee131c06211";
+const MocaIdAddress = "0x2798f763da1a16b058e7706ad29ea9d4c44d9d6c";
+const PermissionMwAddress = "0x7d6e5286b666d61b58ed8f7e3fc68a0de2375b4b";
 
 // ------------- register params -------------
 // 2033-05-18T11:33:20, can be updated to a value that wish the signature to be expired
@@ -27,6 +28,8 @@ const deadline = 2000000000;
 const nameToRegister = "jack";
 // the address to register to
 const to = "0x2E0446079705B6Bacc4730fB3EDA5DA68aE5Fe4D";
+const mocaNode =
+  "0xbfa0715290784075e564f966fffd9898ace1d7814f833780f62e59b079135746";
 // *** IMPORTANT ***
 
 const register = async () => {
@@ -58,6 +61,7 @@ const register = async () => {
   const message = {
     name: nameToRegister,
     to: to,
+    parentNode: mocaNode,
     nonce: nonce.toNumber(),
     deadline: deadline,
   };
@@ -80,7 +84,7 @@ const register = async () => {
     MocaIdAbi,
     wallet
   );
-  const tx = await mocaIdContract.register(nameToRegister, to, data);
+  const tx = await mocaIdContract.register(nameToRegister, mocaNode, to, data);
   await tx.wait();
   console.log("Transaction hash:", tx.hash);
 };

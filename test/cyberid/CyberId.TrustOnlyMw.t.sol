@@ -5,7 +5,7 @@ pragma solidity 0.8.14;
 import "forge-std/Test.sol";
 import "../../src/core/CyberId.sol";
 import { DataTypes } from "../../src/libraries/DataTypes.sol";
-import { TrustOnlyMiddleware } from "../../src/middlewares/TrustOnlyMiddleware.sol";
+import { TrustOnlyMiddleware } from "../../src/middlewares/cyberid/TrustOnlyMiddleware.sol";
 import { CyberIdTestBase } from "../utils/CyberIdTestBase.sol";
 
 /**

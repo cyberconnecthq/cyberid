@@ -10,9 +10,9 @@ import { DeploySetting } from "./DeploySetting.sol";
 import { LibString } from "../../src/libraries/LibString.sol";
 import { Create2Deployer } from "../../src/deployer/Create2Deployer.sol";
 import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { PermissionMw } from "../../src/middlewares/PermissionMw.sol";
-import { StableFeeMiddleware } from "../../src/middlewares/StableFeeMiddleware.sol";
-import { TrustOnlyMiddleware } from "../../src/middlewares/TrustOnlyMiddleware.sol";
+import { PermissionMw } from "../../src/middlewares/mocaid/PermissionMw.sol";
+import { StableFeeMiddleware } from "../../src/middlewares/cyberid/StableFeeMiddleware.sol";
+import { TrustOnlyMiddleware } from "../../src/middlewares/cyberid/TrustOnlyMiddleware.sol";
 
 library LibDeploy {
     // create2 deploy all contract with this protocol salt
@@ -137,6 +137,11 @@ library LibDeploy {
         address permissionMw = address(new PermissionMw(mocaIdProxy));
 
         MocaId(mocaIdProxy).setMiddleware(permissionMw, abi.encode(msg.sender));
+        MocaId(mocaIdProxy).grantRole(
+            keccak256(bytes("OPERATOR_ROLE")),
+            msg.sender
+        );
+        MocaId(mocaIdProxy).allowNode("moca", bytes32(0), true);
 
         _write(vm, "PermissionMw", permissionMw);
     }

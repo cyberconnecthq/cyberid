@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.14;
 
-import { ICyberIdMiddleware } from "../../interfaces/ICyberIdMiddleware.sol";
+import { ICyberIdMiddleware } from "../../../interfaces/ICyberIdMiddleware.sol";
 
 abstract contract LowerCaseCyberIdMiddleware is ICyberIdMiddleware {
     /*//////////////////////////////////////////////////////////////

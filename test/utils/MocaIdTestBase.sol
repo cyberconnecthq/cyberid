@@ -6,6 +6,8 @@ import "forge-std/Test.sol";
 import "../../src/core/MocaId.sol";
 import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
+import "forge-std/console.sol";
+
 abstract contract MocaIdTestBase is Test {
     MocaId public mid;
     uint256 public aliceSk = 666;
@@ -47,6 +49,7 @@ abstract contract MocaIdTestBase is Test {
         mid = MocaId(address(proxy));
         mid.grantRole(keccak256("OPERATOR_ROLE"), aliceAddress);
         mocaNode = mid.allowNode("moca", bytes32(0), true);
+        console.logBytes32(mocaNode);
 
         // set timestamp to startTs
         vm.warp(startTs);

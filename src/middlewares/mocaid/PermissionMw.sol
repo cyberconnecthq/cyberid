@@ -2,10 +2,10 @@
 
 pragma solidity 0.8.14;
 
-import { IMiddleware } from "../interfaces/IMiddleware.sol";
-import { DataTypes } from "../libraries/DataTypes.sol";
-import { Constants } from "../libraries/Constants.sol";
-import { EIP712 } from "../base/EIP712.sol";
+import { IMiddleware } from "../../interfaces/IMiddleware.sol";
+import { DataTypes } from "../../libraries/DataTypes.sol";
+import { Constants } from "../../libraries/Constants.sol";
+import { EIP712 } from "../../base/EIP712.sol";
 
 contract PermissionMw is IMiddleware, EIP712 {
     /*//////////////////////////////////////////////////////////////
@@ -72,6 +72,7 @@ contract PermissionMw is IMiddleware, EIP712 {
                     abi.encode(
                         Constants._REGISTER_TYPEHASH,
                         keccak256(bytes(params.name)),
+                        params.parentNode,
                         params.to,
                         nonces[params.to]++,
                         sig.deadline
