@@ -190,7 +190,7 @@ contract MocaIdTest is MocaIdTestBase {
         mid.register("alice", aliceAddress, "");
         vm.stopPrank();
         vm.startPrank(bobAddress);
-        vm.expectRevert("Ownable: caller is not the owner");
+        vm.expectRevert("NOT_ADMIN");
         mid.upgradeTo(address(0));
     }
 

@@ -13,6 +13,9 @@ abstract contract MetadataResolver is Initializable {
     mapping(uint64 => mapping(uint256 => mapping(string => string))) _metadatas;
     mapping(uint256 => uint64) public metadataVersions;
 
+    mapping(uint64 => mapping(uint256 => mapping(string => string))) _gatedMetadatas;
+    mapping(uint256 => uint64) public gatedMetadataVersions;
+
     /**
      * @dev Added to allow future versions to add new variables in case this contract becomes
      *      inherited. See https://docs.openzeppelin.com/contracts/4.x/upgradeable#storage_gaps
@@ -27,12 +30,31 @@ abstract contract MetadataResolver is Initializable {
 
     event MetadataChanged(uint256 indexed tokenId, string key, string value);
 
+    event GatedMetadataVersionChanged(
+        uint256 indexed tokenId,
+        uint64 newVersion
+    );
+
+    event GatedMetadataChanged(
+        uint256 indexed tokenId,
+        string key,
+        string value
+    );
+
     /*//////////////////////////////////////////////////////////////
                             MODIFIER
     //////////////////////////////////////////////////////////////*/
 
     modifier authorised(uint256 tokenId) {
         require(_isMetadataAuthorised(tokenId), "METADATA_UNAUTHORISED");
+        _;
+    }
+
+    modifier gatedAuthorised(uint256 tokenId) {
+        require(
+            _isGatedMetadataAuthorised(tokenId),
+            "GATED_METADATA_UNAUTHORISED"
+        );
         _;
     }
 
@@ -51,8 +73,18 @@ abstract contract MetadataResolver is Initializable {
     }
 
     /**
+     * @notice  Clears all gated metadata on a token.
+     * @param   tokenId  token to clear metadata.
+     */
+    function clearGatedMetadatas(
+        uint256 tokenId
+    ) external virtual gatedAuthorised(tokenId) {
+        _clearGatedMetadatas(tokenId);
+    }
+
+    /**
      * @notice Sets the metadatas associated with an token and keys.
-     * Only can be called by the owner or approved operators of that node.
+     * Only can be called by the owner or approved operators of that token.
      * @param tokenId The token to update.
      * @param pairs The kv pairs to set.
      */
@@ -69,6 +101,24 @@ abstract contract MetadataResolver is Initializable {
     }
 
     /**
+     * @notice Sets the gated metadatas associated with an token and keys.
+     * @param tokenId The token to update.
+     * @param pairs The kv pairs to set.
+     */
+    function batchSetGatedMetadatas(
+        uint256 tokenId,
+        DataTypes.MetadataPair[] calldata pairs
+    ) public gatedAuthorised(tokenId) {
+        for (uint256 i = 0; i < pairs.length; i++) {
+            DataTypes.MetadataPair memory pair = pairs[i];
+            _gatedMetadatas[gatedMetadataVersions[tokenId]][tokenId][
+                pair.key
+            ] = pair.value;
+            emit GatedMetadataChanged(tokenId, pair.key, pair.value);
+        }
+    }
+
+    /**
      * @notice Returns the metadata associated with an token and key.
      * @param tokenId The token to query.
      * @param key The metadata key to query.
@@ -81,6 +131,19 @@ abstract contract MetadataResolver is Initializable {
         return _metadatas[metadataVersions[tokenId]][tokenId][key];
     }
 
+    /**
+     * @notice Returns the gated metadata associated with an token and key.
+     * @param tokenId The token to query.
+     * @param key The metadata key to query.
+     * @return The associated metadata.
+     */
+    function getGatedMetadata(
+        uint256 tokenId,
+        string calldata key
+    ) public view returns (string memory) {
+        return _gatedMetadatas[gatedMetadataVersions[tokenId]][tokenId][key];
+    }
+
     /*//////////////////////////////////////////////////////////////
                             INTERNAL
     //////////////////////////////////////////////////////////////*/
@@ -89,12 +152,20 @@ abstract contract MetadataResolver is Initializable {
         uint256 tokenId
     ) internal view virtual returns (bool);
 
-    /**
-     * @notice  Clears all metadata on a token.
-     * @param   tokenId  token to clear metadata.
-     */
+    function _isGatedMetadataAuthorised(
+        uint256 tokenId
+    ) internal view virtual returns (bool);
+
     function _clearMetadatas(uint256 tokenId) internal virtual {
         metadataVersions[tokenId]++;
         emit MetadataVersionChanged(tokenId, metadataVersions[tokenId]);
+    }
+
+    function _clearGatedMetadatas(uint256 tokenId) internal virtual {
+        gatedMetadataVersions[tokenId]++;
+        emit GatedMetadataVersionChanged(
+            tokenId,
+            gatedMetadataVersions[tokenId]
+        );
     }
 }

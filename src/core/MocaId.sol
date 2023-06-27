@@ -2,10 +2,11 @@
 
 pragma solidity 0.8.14;
 
-import { OwnableUpgradeable } from "openzeppelin-upgradeable/contracts/access/OwnableUpgradeable.sol";
+import { AccessControlUpgradeable } from "openzeppelin-upgradeable/contracts/access/AccessControlUpgradeable.sol";
 import { ERC721Upgradeable } from "openzeppelin-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
 import { UUPSUpgradeable } from "openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { Initializable } from "openzeppelin-upgradeable/contracts/proxy/utils/Initializable.sol";
+import { PausableUpgradeable } from "openzeppelin-upgradeable/contracts/security/PausableUpgradeable.sol";
 
 import { IMiddleware } from "../interfaces/IMiddleware.sol";
 
@@ -17,8 +18,9 @@ import { MetadataResolver } from "../base/MetadataResolver.sol";
 contract MocaId is
     Initializable,
     ERC721Upgradeable,
-    OwnableUpgradeable,
+    AccessControlUpgradeable,
     UUPSUpgradeable,
+    PausableUpgradeable,
     MetadataResolver
 {
     using LibString for *;
@@ -41,6 +43,10 @@ contract MocaId is
      * @notice The number of mocaIds minted.
      */
     uint256 internal _mintCount;
+
+    string internal constant _MOCA_XP_KEY = "MXP";
+
+    bytes32 internal constant _OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -81,7 +87,10 @@ contract MocaId is
         /* Initialize inherited contracts */
         __ERC721_init(_tokenName, _tokenSymbol);
         __UUPSUpgradeable_init();
-        _transferOwnership(_owner);
+        __AccessControl_init();
+        __Pausable_init();
+        _pause();
+        _setupRole(DEFAULT_ADMIN_ROLE, _owner);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -134,6 +143,7 @@ contract MocaId is
     function burn(uint256 tokenId) external {
         require(_isApprovedOrOwner(msg.sender, tokenId), "UNAUTHORIZED");
         _clearMetadatas(tokenId);
+        _clearGatedMetadatas(tokenId);
         super._burn(tokenId);
         --_mintCount;
     }
@@ -143,23 +153,34 @@ contract MocaId is
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc ERC721Upgradeable
-    function transferFrom(address, address, uint256) public pure override {
-        revert("TRANSFER_NOT_ALLOWED");
-    }
-
-    /// @inheritdoc ERC721Upgradeable
-    function safeTransferFrom(address, address, uint256) public pure override {
-        revert("TRANSFER_NOT_ALLOWED");
+    function transferFrom(
+        address from,
+        address to,
+        uint256 tokenId
+    ) public override {
+        require(!paused(), "TRANSFER_NOT_ALLOWED");
+        super.transferFrom(from, to, tokenId);
     }
 
     /// @inheritdoc ERC721Upgradeable
     function safeTransferFrom(
-        address,
-        address,
-        uint256,
-        bytes memory
-    ) public pure override {
-        revert("TRANSFER_NOT_ALLOWED");
+        address from,
+        address to,
+        uint256 tokenId
+    ) public override {
+        require(!paused(), "TRANSFER_NOT_ALLOWED");
+        super.safeTransferFrom(from, to, tokenId);
+    }
+
+    /// @inheritdoc ERC721Upgradeable
+    function safeTransferFrom(
+        address from,
+        address to,
+        uint256 tokenId,
+        bytes memory data
+    ) public override {
+        require(!paused(), "TRANSFER_NOT_ALLOWED");
+        super.safeTransferFrom(from, to, tokenId, data);
     }
 
     /**
@@ -198,6 +219,32 @@ contract MocaId is
         return _mintCount;
     }
 
+    /**
+     * @notice Gets the moca xp of the given token id.
+     * @param tokenId The token id.
+     * @return string The moca xp.
+     */
+    function getMocaXP(uint256 tokenId) external view returns (string memory) {
+        return this.getGatedMetadata(tokenId, _MOCA_XP_KEY);
+    }
+
+    /**
+     * @dev See {IERC165-supportsInterface}.
+     */
+    function supportsInterface(
+        bytes4 interfaceId
+    )
+        public
+        view
+        virtual
+        override(ERC721Upgradeable, AccessControlUpgradeable)
+        returns (bool)
+    {
+        return
+            ERC721Upgradeable.supportsInterface(interfaceId) ||
+            AccessControlUpgradeable.supportsInterface(interfaceId);
+    }
+
     /*//////////////////////////////////////////////////////////////
                             OWNER ONLY
     //////////////////////////////////////////////////////////////*/
@@ -205,7 +252,9 @@ contract MocaId is
     /**
      * @notice Sets the base token uri.
      */
-    function setBaseTokenUri(string calldata uri) external onlyOwner {
+    function setBaseTokenUri(
+        string calldata uri
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         baseTokenUri = uri;
     }
 
@@ -215,11 +264,38 @@ contract MocaId is
     function setMiddleware(
         address _middleware,
         bytes calldata data
-    ) external onlyOwner {
+    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         middleware = _middleware;
         if (middleware != address(0)) {
             IMiddleware(middleware).setMwData(data);
         }
+    }
+
+    /**
+     * @notice Pauses all token transfers.
+     */
+    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _pause();
+    }
+
+    /**
+     * @notice Unpauses all token transfers.
+     */
+    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            OPERATOR ONLY
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Sets the moca xp.
+     */
+    function setMocaXP(uint256 tokenId, string calldata xp) external {
+        DataTypes.MetadataPair[] memory pairs = new DataTypes.MetadataPair[](1);
+        pairs[0] = DataTypes.MetadataPair(_MOCA_XP_KEY, xp);
+        this.batchSetGatedMetadatas(tokenId, pairs);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -227,7 +303,9 @@ contract MocaId is
     //////////////////////////////////////////////////////////////*/
 
     // solhint-disable-next-line no-empty-blocks
-    function _authorizeUpgrade(address) internal view override onlyOwner {}
+    function _authorizeUpgrade(address) internal view override {
+        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "NOT_ADMIN");
+    }
 
     function _register(string calldata mocaId, address to) internal {
         require(available(mocaId), "NAME_NOT_AVAILABLE");
@@ -243,5 +321,11 @@ contract MocaId is
         uint256 tokenId
     ) internal view override returns (bool) {
         return super._isApprovedOrOwner(msg.sender, tokenId);
+    }
+
+    function _isGatedMetadataAuthorised(
+        uint256
+    ) internal view override returns (bool) {
+        return hasRole(_OPERATOR_ROLE, msg.sender);
     }
 }
