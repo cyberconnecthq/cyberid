@@ -79,6 +79,35 @@ contract MocaId is
     );
 
     /**
+     * @dev Emit an event when a mocaId is burned.
+     *
+     * @param tokenId The tokenId of the mocaId
+     */
+    event Burn(uint256 indexed tokenId);
+
+    /**
+     * @dev Emit an event when a middleware is set.
+     *
+     * @param middleware The middleware contract address
+     * @param data       The data of the middleware
+     */
+    event MiddlewareSet(address indexed middleware, bytes data);
+
+    /**
+     * @dev Emit an event when a base token URI is set.
+     *
+     * @param uri The base token URI
+     */
+    event BaseTokenURISet(string uri);
+
+    /**
+     * @dev Emit an event when moca xp is set.
+     *
+     * @param tokenId The tokenId of the mocaId
+     */
+    event MocaXPSet(uint256 indexed tokenId, uint256 xp);
+
+    /**
      * @dev Emit an event when a node allowance changed.
      *
      * @param node       The node
@@ -185,6 +214,7 @@ contract MocaId is
         _clearGatedMetadatas(tokenId);
         super._burn(tokenId);
         --_mintCount;
+        emit Burn(tokenId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -303,6 +333,7 @@ contract MocaId is
         string calldata uri
     ) external onlyRole(DEFAULT_ADMIN_ROLE) {
         baseTokenURI = uri;
+        emit BaseTokenURISet(uri);
     }
 
     /**
@@ -316,6 +347,7 @@ contract MocaId is
         if (middleware != address(0)) {
             IMiddleware(middleware).setMwData(data);
         }
+        emit MiddlewareSet(_middleware, data);
     }
 
     /**
@@ -344,6 +376,7 @@ contract MocaId is
         DataTypes.MetadataPair[] memory pairs = new DataTypes.MetadataPair[](1);
         pairs[0] = DataTypes.MetadataPair(_MOCA_XP_KEY, xp.toString());
         batchSetGatedMetadatas(tokenId, pairs);
+        emit MocaXPSet(tokenId, xp);
     }
 
     /**
