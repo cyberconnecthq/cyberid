@@ -51,12 +51,8 @@ contract MocaId is
      */
     uint256 internal _mintCount;
 
-    string internal constant _MOCA_XP_KEY = "MXP";
-
     bytes32 internal constant _OPERATOR_ROLE =
         keccak256(bytes("OPERATOR_ROLE"));
-
-    uint256 internal constant _MAX_XP = 1e77 - 1;
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -99,13 +95,6 @@ contract MocaId is
      * @param uri The base token URI
      */
     event BaseTokenURISet(string uri);
-
-    /**
-     * @dev Emit an event when moca xp is set.
-     *
-     * @param tokenId The tokenId of the mocaId
-     */
-    event MocaXPSet(uint256 indexed tokenId, uint256 xp);
 
     /**
      * @dev Emit an event when a node allowance changed.
@@ -293,19 +282,6 @@ contract MocaId is
     }
 
     /**
-     * @notice Gets the moca xp of the given token id.
-     * @param tokenId The token id.
-     * @return string The moca xp.
-     */
-    function getMocaXP(uint256 tokenId) external view returns (uint256) {
-        string memory mocaXp = getGatedMetadata(tokenId, _MOCA_XP_KEY);
-        if (bytes(mocaXp).length == 0) {
-            return 0;
-        }
-        return LibString.stringToUint256(mocaXp);
-    }
-
-    /**
      * @dev See {IERC165-supportsInterface}.
      */
     function supportsInterface(
@@ -367,17 +343,6 @@ contract MocaId is
     /*//////////////////////////////////////////////////////////////
                             OPERATOR ONLY
     //////////////////////////////////////////////////////////////*/
-
-    /**
-     * @notice Sets the moca xp.
-     */
-    function setMocaXP(uint256 tokenId, uint256 xp) external {
-        require(xp <= _MAX_XP, "XP_TOO_BIG");
-        DataTypes.MetadataPair[] memory pairs = new DataTypes.MetadataPair[](1);
-        pairs[0] = DataTypes.MetadataPair(_MOCA_XP_KEY, xp.toString());
-        batchSetGatedMetadatas(tokenId, pairs);
-        emit MocaXPSet(tokenId, xp);
-    }
 
     /**
      * @notice allows node. E.g. '.moca', '.music'.

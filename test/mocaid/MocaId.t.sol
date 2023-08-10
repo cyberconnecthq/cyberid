@@ -298,43 +298,6 @@ contract MocaIdTest is MocaIdTestBase {
         assertEq(mid.getGatedMetadata(tokenId, "2"), "2");
     }
 
-    function test_NameRegistered_OwnerSetMocaXp_RevertNotAuth() public {
-        vm.stopPrank();
-        vm.startPrank(bobAddress);
-        uint256 tokenId = mid.register("bob", mocaNode, bobAddress, "");
-        vm.expectRevert("GATED_METADATA_UNAUTHORISED");
-        mid.setMocaXP(tokenId, 100);
-    }
-
-    function test_NameRegistered_SetMocaXp_Success() public {
-        vm.stopPrank();
-        vm.startPrank(bobAddress);
-        uint256 tokenId = mid.register("bob", mocaNode, bobAddress, "");
-        uint256 mocaXp = mid.getMocaXP(tokenId);
-        assertEq(mocaXp, 0);
-
-        vm.stopPrank();
-        vm.startPrank(aliceAddress);
-        uint256 expectedXp = 1234567890;
-        mid.setMocaXP(tokenId, expectedXp);
-        mocaXp = mid.getMocaXP(tokenId);
-        assertEq(mocaXp, expectedXp);
-
-        expectedXp = 0;
-        mid.setMocaXP(tokenId, expectedXp);
-        mocaXp = mid.getMocaXP(tokenId);
-        assertEq(mocaXp, expectedXp);
-
-        expectedXp = 1e77 - 1;
-        mid.setMocaXP(tokenId, expectedXp);
-        mocaXp = mid.getMocaXP(tokenId);
-        assertEq(mocaXp, expectedXp);
-
-        expectedXp = 1e77;
-        vm.expectRevert("XP_TOO_BIG");
-        mid.setMocaXP(tokenId, expectedXp);
-    }
-
     function test_AliceIsOwner_BobUpgradeContract_ReverNotOwner() public {
         mid.register("alice", mocaNode, aliceAddress, "");
         vm.stopPrank();
