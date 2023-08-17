@@ -72,7 +72,7 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
     {
         cid.commit(commitmentWithPreData);
         vm.warp(startTs + 61 seconds);
-        uint256 cost = stableFeeMw.getPriceWeiAt("alice", 1, 1);
+        uint256 cost = stableFeeMw.getPriceWei("alice", 1);
         vm.expectRevert("INSUFFICIENT_FUNDS");
         cid.register{ value: cost - 1 wei }(
             "alice",
@@ -88,7 +88,7 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
         vm.startPrank(mockWalletAddress);
         cid.commit(commitmentWithPreData);
         vm.warp(startTs + 61 seconds);
-        uint256 cost = stableFeeMw.getPriceWeiAt("alice", 1, 1);
+        uint256 cost = stableFeeMw.getPriceWei("alice", 1);
         vm.expectRevert("REFUND_FAILED");
         cid.register{ value: cost * 1 wei + 1 ether }(
             "alice",
@@ -102,7 +102,7 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
     function test_Committed_RegisterWithOverPay_Refund() public {
         cid.commit(commitmentWithPreData);
         vm.warp(startTs + 61 seconds);
-        uint256 cost = stableFeeMw.getPriceWeiAt("alice", 1, 1);
+        uint256 cost = stableFeeMw.getPriceWei("alice", 1);
         vm.expectEmit(true, true, true, true);
         emit Transfer(address(0), aliceAddress, cid.getTokenId("alice"));
         vm.expectEmit(true, true, true, true);
@@ -152,7 +152,7 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
             1,
             preData
         );
-        uint256 registerCost = stableFeeMw.getPriceWeiAt("alice", 1, 1);
+        uint256 registerCost = stableFeeMw.getPriceWei("alice", 1);
 
         uint256 renewCost = stableFeeMw.getPriceWei("alice", 1);
         uint256 newExpiry = startTs + 61 seconds + 365 days + 365 days;
@@ -217,7 +217,7 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
             1,
             preData
         );
-        uint256 registerCost = stableFeeMw.getPriceWeiAt("alice", 1, 1);
+        uint256 registerCost = stableFeeMw.getPriceWei("alice", 1);
 
         uint256 baseFee = stableFeeMw.getPriceWei("alice", 1);
         uint256 bidFee = baseFee + 1000 ether;
@@ -246,7 +246,7 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
             1,
             preData
         );
-        uint256 registerCost = stableFeeMw.getPriceWeiAt("alice", 1, 1);
+        uint256 registerCost = stableFeeMw.getPriceWei("alice", 1);
 
         uint256 baseFee = stableFeeMw.getPriceWei("alice", 1);
         uint256 bidFee = 899995021729403941000 wei + baseFee;
@@ -277,7 +277,7 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
             1,
             preData
         );
-        uint256 registerCost = stableFeeMw.getPriceWeiAt("alice", 1, 1);
+        uint256 registerCost = stableFeeMw.getPriceWei("alice", 1);
 
         uint256 baseFee = stableFeeMw.getPriceWei("alice", 1);
         uint256 bidFee = 1000 wei + baseFee;
@@ -307,7 +307,7 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
             1,
             preData
         );
-        uint256 registerCost = stableFeeMw.getPriceWeiAt("alice", 1, 1);
+        uint256 registerCost = stableFeeMw.getPriceWei("alice", 1);
 
         uint256 baseFee = stableFeeMw.getPriceWei("alice", 1);
         uint256 bidFee = baseFee;

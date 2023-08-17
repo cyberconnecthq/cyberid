@@ -103,10 +103,9 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
     /// @inheritdoc ICyberIdMiddleware
     function preRegister(
         DataTypes.RegisterCyberIdParams calldata params,
-        bytes calldata data
+        bytes calldata
     ) external payable override onlyNameRegistry returns (uint256) {
-        uint80 roundId = abi.decode(data, (uint80));
-        uint256 cost = getPriceWeiAt(params.cid, roundId, params.durationYear);
+        uint256 cost = getPriceWei(params.cid, params.durationYear);
         _chargeAndRefundOverPayment(cost, params.msgSender);
         return cost;
     }
@@ -190,14 +189,6 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
                             PUBLIC VIEW
     //////////////////////////////////////////////////////////////*/
 
-    function getPriceWeiAt(
-        string calldata cid,
-        uint80 roundId,
-        uint durationYear
-    ) public view returns (uint256) {
-        return _attoUSDToWeiAt(_getUSDPrice(cid, durationYear), roundId);
-    }
-
     function getPriceWei(
         string calldata cid,
         uint durationYear
@@ -230,18 +221,6 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
         return usdPrice;
     }
 
-    function _getPriceAt(uint80 roundId) internal view returns (int256) {
-        // prettier-ignore
-        (
-            /* uint80 roundID */,
-            int price,
-            /*uint startedAt*/,
-            /*uint timeStamp*/,
-            /*uint80 answeredInRound*/
-        ) = usdOracle.getRoundData(roundId);
-        return price;
-    }
-
     function _getPrice() internal view returns (int256) {
         // prettier-ignore
         (
@@ -252,14 +231,6 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
             /*uint80 answeredInRound*/
         ) = usdOracle.latestRoundData();
         return price;
-    }
-
-    function _attoUSDToWeiAt(
-        uint256 amount,
-        uint80 roundId
-    ) internal view returns (uint256) {
-        uint256 ethPrice = uint256(_getPriceAt(roundId));
-        return (amount * 1e8) / ethPrice;
     }
 
     function _attoUSDToWei(uint256 amount) internal view returns (uint256) {
