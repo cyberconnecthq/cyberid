@@ -83,7 +83,7 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
     function preRegister(
         DataTypes.RegisterCyberIdParams calldata params,
         bytes calldata data
-    ) external payable override returns (uint256) {
+    ) external payable override onlyNameRegistry returns (uint256) {
         uint80 roundId = abi.decode(data, (uint80));
         uint256 cost = getPriceWeiAt(params.cid, roundId, params.durationYear);
         _chargeAndRefundOverPayment(cost, params.msgSender);
@@ -94,7 +94,7 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
     function preRenew(
         DataTypes.RenewCyberIdParams calldata params,
         bytes calldata
-    ) external payable override returns (uint256) {
+    ) external payable override onlyNameRegistry returns (uint256) {
         uint256 cost = getPriceWei(params.cid, params.durationYear);
         _chargeAndRefundOverPayment(cost, params.msgSender);
         return cost;
@@ -104,7 +104,7 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
     function preBid(
         DataTypes.BidCyberIdParams calldata params,
         bytes calldata
-    ) external payable override returns (uint256) {
+    ) external payable override onlyNameRegistry returns (uint256) {
         /**
          * Calculate the bid price for the dutch auction which the dutchPremium + renewalFee.
          *
