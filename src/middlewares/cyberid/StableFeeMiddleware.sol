@@ -226,10 +226,12 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
         (
             /* uint80 roundID */,
             int price,
-            /*uint startedAt*/,
-            /*uint timeStamp*/,
+            /* uint startedAt */,
+            uint updatedAt,
             /*uint80 answeredInRound*/
         ) = usdOracle.latestRoundData();
+        require(price > 0, "INVALID_ORACLE_PRICE");
+        require(updatedAt > block.timestamp - 3 hours, "STALE_ORACLE_PRICE");
         return price;
     }
 
