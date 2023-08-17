@@ -58,4 +58,14 @@ contract TrustOnlyMiddleware is Ownable, LowerCaseCyberIdMiddleware {
         require(params.msgSender == owner(), "NOT_TRUSTED_CALLER");
         return 0;
     }
+
+    /// @inheritdoc Ownable
+    function renounceOwnership() public view override onlyOwner {
+        revert("NOT_ALLOWED");
+    }
+
+    /// @inheritdoc Ownable
+    function transferOwnership(address) public view override onlyOwner {
+        revert("NOT_ALLOWED");
+    }
 }
