@@ -88,6 +88,21 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
      */
     event Bid(string cid, uint256 expiry, uint256 cost);
 
+    /**
+     * @dev Emit an event when middleware is set.
+     *
+     * @param middleware The middleware contract address set to
+     * @param data The middleware data to initialize with
+     */
+    event MiddlewareSet(address indexed middleware, bytes data);
+
+    /**
+     * @dev Emit an event when base token uri is set.
+     *
+     * @param baseTokenURI The base token uri set to
+     */
+    event BaseTokenURISet(string baseTokenURI);
+
     /*//////////////////////////////////////////////////////////////
                             CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
@@ -419,6 +434,7 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
      */
     function setBaseTokenUri(string calldata uri) external onlyOwner {
         baseTokenUri = uri;
+        emit BaseTokenURISet(uri);
     }
 
     /**
@@ -432,6 +448,7 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
         if (middleware != address(0)) {
             ICyberIdMiddleware(middleware).setMwData(data);
         }
+        emit MiddlewareSet(_middleware, data);
     }
 
     /*//////////////////////////////////////////////////////////////

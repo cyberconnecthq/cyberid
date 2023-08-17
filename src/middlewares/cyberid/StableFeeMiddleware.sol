@@ -51,6 +51,19 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
     uint256 internal constant _BID_PERIOD_DECREASE_UD60X18 = 0.9 ether;
 
     /*//////////////////////////////////////////////////////////////
+                                 EVENTS
+    //////////////////////////////////////////////////////////////*/
+
+    event MwDataChanged(
+        address indexed recipient,
+        uint256 price1Letter,
+        uint256 price2Letter,
+        uint256 price3Letter,
+        uint256 price4Letter,
+        uint256 price5Letter
+    );
+
+    /*//////////////////////////////////////////////////////////////
                             CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
@@ -77,6 +90,14 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
         price3Letter = rentPrices[2];
         price4Letter = rentPrices[3];
         price5Letter = rentPrices[4];
+        emit MwDataChanged(
+            _recipient,
+            rentPrices[0],
+            rentPrices[1],
+            rentPrices[2],
+            rentPrices[3],
+            rentPrices[4]
+        );
     }
 
     /// @inheritdoc ICyberIdMiddleware
