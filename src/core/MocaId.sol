@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.14;
 
-import { AccessControlUpgradeable } from "openzeppelin-upgradeable/contracts/access/AccessControlUpgradeable.sol";
+import { OwnableUpgradeable } from "openzeppelin-upgradeable/contracts/access/OwnableUpgradeable.sol";
 import { ERC721Upgradeable } from "openzeppelin-upgradeable/contracts/token/ERC721/ERC721Upgradeable.sol";
 import { UUPSUpgradeable } from "openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { Initializable } from "openzeppelin-upgradeable/contracts/proxy/utils/Initializable.sol";
@@ -18,7 +18,7 @@ import { MetadataResolver } from "../base/MetadataResolver.sol";
 contract MocaId is
     Initializable,
     ERC721Upgradeable,
-    AccessControlUpgradeable,
+    OwnableUpgradeable,
     UUPSUpgradeable,
     PausableUpgradeable,
     MetadataResolver
@@ -50,9 +50,6 @@ contract MocaId is
      * @notice The number of mocaIds minted.
      */
     uint256 internal _mintCount;
-
-    bytes32 internal constant _OPERATOR_ROLE =
-        keccak256(bytes("OPERATOR_ROLE"));
 
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
@@ -137,10 +134,10 @@ contract MocaId is
         /* Initialize inherited contracts */
         __ERC721_init(_tokenName, _tokenSymbol);
         __UUPSUpgradeable_init();
-        __AccessControl_init();
+        __Ownable_init();
         __Pausable_init();
         _pause();
-        _setupRole(DEFAULT_ADMIN_ROLE, _owner);
+        _transferOwnership(_owner);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -281,23 +278,6 @@ contract MocaId is
         return _mintCount;
     }
 
-    /**
-     * @dev See {IERC165-supportsInterface}.
-     */
-    function supportsInterface(
-        bytes4 interfaceId
-    )
-        public
-        view
-        virtual
-        override(ERC721Upgradeable, AccessControlUpgradeable)
-        returns (bool)
-    {
-        return
-            ERC721Upgradeable.supportsInterface(interfaceId) ||
-            AccessControlUpgradeable.supportsInterface(interfaceId);
-    }
-
     /*//////////////////////////////////////////////////////////////
                             OWNER ONLY
     //////////////////////////////////////////////////////////////*/
@@ -305,9 +285,7 @@ contract MocaId is
     /**
      * @notice Sets the base token uri.
      */
-    function setbaseTokenURI(
-        string calldata uri
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setbaseTokenURI(string calldata uri) external onlyOwner {
         baseTokenURI = uri;
         emit BaseTokenURISet(uri);
     }
@@ -318,7 +296,7 @@ contract MocaId is
     function setMiddleware(
         address _middleware,
         bytes calldata data
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    ) external onlyOwner {
         middleware = _middleware;
         if (middleware != address(0)) {
             IMiddleware(middleware).setMwData(data);
@@ -329,20 +307,16 @@ contract MocaId is
     /**
      * @notice Pauses all token transfers.
      */
-    function pause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function pause() external onlyOwner {
         _pause();
     }
 
     /**
      * @notice Unpauses all token transfers.
      */
-    function unpause() external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function unpause() external onlyOwner {
         _unpause();
     }
-
-    /*//////////////////////////////////////////////////////////////
-                            OPERATOR ONLY
-    //////////////////////////////////////////////////////////////*/
 
     /**
      * @notice allows node. E.g. '.moca', '.music'.
@@ -353,7 +327,7 @@ contract MocaId is
         string calldata label,
         bytes32 parentNode,
         bool allow
-    ) external onlyRole(_OPERATOR_ROLE) returns (bytes32 allowedNode) {
+    ) external onlyOwner returns (bytes32 allowedNode) {
         allowedNode = keccak256(
             abi.encodePacked(parentNode, keccak256(bytes(label)))
         );
@@ -366,9 +340,8 @@ contract MocaId is
                              INTERNAL LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    // solhint-disable-next-line no-empty-blocks
     function _authorizeUpgrade(address) internal view override {
-        require(hasRole(DEFAULT_ADMIN_ROLE, msg.sender), "NOT_ADMIN");
+        require(owner() == msg.sender, "NOT_OWNER");
     }
 
     function _register(
@@ -394,6 +367,6 @@ contract MocaId is
         uint256 tokenId
     ) internal view override returns (bool) {
         require(_exists(tokenId), "TOKEN_NOT_MINTED");
-        return hasRole(_OPERATOR_ROLE, msg.sender);
+        return owner() == msg.sender;
     }
 }

@@ -47,7 +47,6 @@ abstract contract MocaIdTestBase is Test {
         vm.stopPrank();
         vm.startPrank(aliceAddress);
         mid = MocaId(address(proxy));
-        mid.grantRole(keccak256("OPERATOR_ROLE"), aliceAddress);
         mocaNode = mid.allowNode("moca", bytes32(0), true);
 
         // set timestamp to startTs

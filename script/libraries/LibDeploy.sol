@@ -137,10 +137,6 @@ library LibDeploy {
         address permissionMw = address(new PermissionMw(mocaIdProxy));
 
         MocaId(mocaIdProxy).setMiddleware(permissionMw, abi.encode(msg.sender));
-        MocaId(mocaIdProxy).grantRole(
-            keccak256(bytes("OPERATOR_ROLE")),
-            msg.sender
-        );
         MocaId(mocaIdProxy).allowNode("moca", bytes32(0), true);
 
         _write(vm, "PermissionMw", permissionMw);

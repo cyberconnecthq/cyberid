@@ -302,7 +302,7 @@ contract MocaIdTest is MocaIdTestBase {
         mid.register("alice", mocaNode, aliceAddress, "");
         vm.stopPrank();
         vm.startPrank(bobAddress);
-        vm.expectRevert("NOT_ADMIN");
+        vm.expectRevert("NOT_OWNER");
         mid.upgradeTo(address(0));
     }
 
