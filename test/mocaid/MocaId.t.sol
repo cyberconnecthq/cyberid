@@ -44,7 +44,14 @@ contract MocaIdTest is MocaIdTestBase {
     function test_NodeNotAllowed_AllowNodeAndCheckNameAvailable_Available()
         public
     {
-        bytes32 musicNode = mid.allowNode("music", bytes32(0), true);
+        bytes32 musicNode = mid.allowNode(
+            "music",
+            bytes32(0),
+            true,
+            "",
+            address(0),
+            new bytes(0)
+        );
         assertTrue(mid.available("alice", musicNode));
     }
 
@@ -144,7 +151,7 @@ contract MocaIdTest is MocaIdTestBase {
     function test_BaseUriSet_TokenUri_Success() public {
         uint256 tokenId = mid.register("alice", mocaNode, aliceAddress, "");
         string memory baseUri = "https://api.cyberconnect.dev/";
-        mid.setbaseTokenURI(baseUri);
+        mid.setBaseTokenURI(mocaNode, baseUri);
         assertEq(
             mid.tokenURI(tokenId),
             string(
@@ -162,14 +169,14 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_MiddlewareNotSet_SetMiddleware_Success() public {
-        assertEq(mid.middleware(), address(0));
+        assertEq(mid.middlewares(mocaNode), address(0));
         MockMiddleware middleware = new MockMiddleware();
-        mid.setMiddleware(address(middleware), bytes("0x1234"));
-        assertEq(mid.middleware(), address(middleware));
+        mid.setMiddleware(mocaNode, address(middleware), bytes("0x1234"));
+        assertEq(mid.middlewares(mocaNode), address(middleware));
         assertEq(middleware.mwData(), bytes("0x1234"));
 
-        mid.setMiddleware(address(0), "");
-        assertEq(mid.middleware(), address(0));
+        mid.setMiddleware(mocaNode, address(0), "");
+        assertEq(mid.middlewares(mocaNode), address(0));
     }
 
     function test_NameRegistered_SetMetadata_ReadSuccess() public {
@@ -316,7 +323,14 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_CheckEIP137() public {
-        bytes32 ethNode = mid.allowNode("eth", bytes32(0), true);
+        bytes32 ethNode = mid.allowNode(
+            "eth",
+            bytes32(0),
+            true,
+            "",
+            address(0),
+            new bytes(0)
+        );
         assertEq(
             ethNode,
             0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae

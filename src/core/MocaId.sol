@@ -32,12 +32,12 @@ contract MocaId is
     /**
      * @notice Token URI prefix.
      */
-    string public baseTokenURI;
+    mapping(bytes32 => string) public baseTokenURIs;
 
     /**
      * @notice Middleware contract that processes before and after the registration.
      */
-    address public middleware;
+    mapping(bytes32 => address) public middlewares;
 
     /**
      * @notice The allowed parent nodes of the mocaId.
@@ -45,6 +45,11 @@ contract MocaId is
      * https://eips.ethereum.org/EIPS/eip-137
      */
     mapping(bytes32 => bool) public allowedParentNodes;
+
+    /**
+     * @notice The parent node of the tokenId.
+     */
+    mapping(uint256 => bytes32) public parents;
 
     /**
      * @notice The number of mocaIds minted.
@@ -81,17 +86,19 @@ contract MocaId is
     /**
      * @dev Emit an event when a middleware is set.
      *
+     * @param node       The node to set the middleware for
      * @param middleware The middleware contract address
      * @param data       The data of the middleware
      */
-    event MiddlewareSet(address indexed middleware, bytes data);
+    event MiddlewareSet(bytes32 node, address indexed middleware, bytes data);
 
     /**
      * @dev Emit an event when a base token URI is set.
      *
+     * @param node The node to set the base token URI for
      * @param uri The base token URI
      */
-    event BaseTokenURISet(string uri);
+    event BaseTokenURISet(bytes32 node, string uri);
 
     /**
      * @dev Emit an event when a node allowance changed.
@@ -157,6 +164,7 @@ contract MocaId is
         require(allowedParentNodes[parentNode], "NODE_NOT_ALLOWED");
         uint256 tokenId = getTokenId(_name, parentNode);
         if (!_exists(tokenId)) {
+            address middleware = middlewares[parentNode];
             if (middleware != address(0)) {
                 return IMiddleware(middleware).namePatternValid(_name);
             } else {
@@ -181,6 +189,7 @@ contract MocaId is
         address to,
         bytes calldata preData
     ) external returns (uint256) {
+        address middleware = middlewares[parentNode];
         if (middleware != address(0)) {
             DataTypes.RegisterNameParams memory params = DataTypes
                 .RegisterNameParams(msg.sender, _name, parentNode, to);
@@ -198,6 +207,7 @@ contract MocaId is
         require(_isApprovedOrOwner(msg.sender, tokenId), "UNAUTHORIZED");
         _clearMetadatas(tokenId);
         _clearGatedMetadatas(tokenId);
+        delete parents[tokenId];
         super._burn(tokenId);
         --_mintCount;
         emit Burn(tokenId);
@@ -247,7 +257,13 @@ contract MocaId is
         uint256 tokenId
     ) public view override returns (string memory) {
         require(_exists(tokenId), "INVALID_TOKEN_ID");
-        return string(abi.encodePacked(baseTokenURI, tokenId.toString()));
+        return
+            string(
+                abi.encodePacked(
+                    baseTokenURIs[parents[tokenId]],
+                    tokenId.toString()
+                )
+            );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -285,23 +301,27 @@ contract MocaId is
     /**
      * @notice Sets the base token uri.
      */
-    function setbaseTokenURI(string calldata uri) external onlyOwner {
-        baseTokenURI = uri;
-        emit BaseTokenURISet(uri);
+    function setBaseTokenURI(
+        bytes32 node,
+        string calldata uri
+    ) public onlyOwner {
+        baseTokenURIs[node] = uri;
+        emit BaseTokenURISet(node, uri);
     }
 
     /**
      * @notice Sets the middleware and data.
      */
     function setMiddleware(
+        bytes32 node,
         address _middleware,
         bytes calldata data
-    ) external onlyOwner {
-        middleware = _middleware;
-        if (middleware != address(0)) {
-            IMiddleware(middleware).setMwData(data);
+    ) public onlyOwner {
+        middlewares[node] = _middleware;
+        if (_middleware != address(0)) {
+            IMiddleware(_middleware).setMwData(data);
         }
-        emit MiddlewareSet(_middleware, data);
+        emit MiddlewareSet(node, _middleware, data);
     }
 
     /**
@@ -326,13 +346,18 @@ contract MocaId is
     function allowNode(
         string calldata label,
         bytes32 parentNode,
-        bool allow
+        bool allow,
+        string calldata baseTokenURI,
+        address middleware,
+        bytes calldata middlewareData
     ) external onlyOwner returns (bytes32 allowedNode) {
         allowedNode = keccak256(
             abi.encodePacked(parentNode, keccak256(bytes(label)))
         );
         allowedParentNodes[allowedNode] = allow;
         emit NodeAllowanceChanged(allowedNode, label, parentNode, allow);
+        setBaseTokenURI(allowedNode, baseTokenURI);
+        setMiddleware(allowedNode, middleware, middlewareData);
         return allowedNode;
     }
 
@@ -353,6 +378,7 @@ contract MocaId is
         uint256 tokenId = getTokenId(_name, parentNode);
         super._safeMint(to, tokenId);
         ++_mintCount;
+        parents[tokenId] = parentNode;
         emit Register(_name, parentNode, tokenId, to);
         return tokenId;
     }

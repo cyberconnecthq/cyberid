@@ -18,7 +18,7 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
         super.setUp();
         PermissionMw permissionMw = new PermissionMw(address(mid));
         mw = address(permissionMw);
-        mid.setMiddleware(mw, abi.encode(aliceAddress));
+        mid.setMiddleware(mocaNode, mw, abi.encode(aliceAddress));
     }
 
     /* solhint-disable func-name-mixedcase */
