@@ -51,7 +51,9 @@ contract PermissionMw is IMiddleware, EIP712 {
 
     /// @inheritdoc IMiddleware
     function setMwData(bytes calldata data) external override onlyNameRegistry {
-        signer = abi.decode(data, (address));
+        address newSigner = abi.decode(data, (address));
+        require(newSigner != address(0), "INVALID_SIGNER");
+        signer = newSigner;
     }
 
     /// @inheritdoc IMiddleware

@@ -57,6 +57,7 @@ abstract contract EIP712 {
         );
 
         address recoveredAddress = ecrecover(digest, v, r, s);
+        require(recoveredAddress != address(0), "INVALID_RECOVERED_ADDRESS");
         require(recoveredAddress == expectedSigner, "INVALID_SIGNATURE");
     }
 

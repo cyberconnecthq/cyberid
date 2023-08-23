@@ -4,6 +4,7 @@ pragma solidity 0.8.14;
 
 import { AggregatorV3Interface } from "chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import { FixedPointMathLib } from "solmate/src/utils/FixedPointMathLib.sol";
+import { ReentrancyGuard } from "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
 import { ICyberIdMiddleware } from "../../interfaces/ICyberIdMiddleware.sol";
 
@@ -12,7 +13,7 @@ import { DataTypes } from "../../libraries/DataTypes.sol";
 
 import { LowerCaseCyberIdMiddleware } from "./base/LowerCaseCyberIdMiddleware.sol";
 
-contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
+contract StableFeeMiddleware is LowerCaseCyberIdMiddleware, ReentrancyGuard {
     using LibString for *;
     using FixedPointMathLib for uint256;
 
@@ -104,7 +105,14 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
     function preRegister(
         DataTypes.RegisterCyberIdParams calldata params,
         bytes calldata
-    ) external payable override onlyNameRegistry returns (uint256) {
+    )
+        external
+        payable
+        override
+        onlyNameRegistry
+        nonReentrant
+        returns (uint256)
+    {
         uint256 cost = getPriceWei(params.cid, params.durationYear);
         _chargeAndRefundOverPayment(cost, params.msgSender);
         return cost;
@@ -114,7 +122,14 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
     function preRenew(
         DataTypes.RenewCyberIdParams calldata params,
         bytes calldata
-    ) external payable override onlyNameRegistry returns (uint256) {
+    )
+        external
+        payable
+        override
+        onlyNameRegistry
+        nonReentrant
+        returns (uint256)
+    {
         uint256 cost = getPriceWei(params.cid, params.durationYear);
         _chargeAndRefundOverPayment(cost, params.msgSender);
         return cost;
@@ -124,7 +139,14 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
     function preBid(
         DataTypes.BidCyberIdParams calldata params,
         bytes calldata
-    ) external payable override onlyNameRegistry returns (uint256) {
+    )
+        external
+        payable
+        override
+        onlyNameRegistry
+        nonReentrant
+        returns (uint256)
+    {
         /**
          * Calculate the bid price for the dutch auction which the dutchPremium + renewalFee.
          *
@@ -224,12 +246,13 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware {
     function _getPrice() internal view returns (int256) {
         // prettier-ignore
         (
-            /* uint80 roundID */,
+            uint80 roundID,
             int price,
             /* uint startedAt */,
             uint updatedAt,
             /*uint80 answeredInRound*/
         ) = usdOracle.latestRoundData();
+        require(roundID != 0, "INVALID_ORACLE_ROUND_ID");
         require(price > 0, "INVALID_ORACLE_PRICE");
         require(updatedAt > block.timestamp - 3 hours, "STALE_ORACLE_PRICE");
         return price;

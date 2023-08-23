@@ -53,6 +53,6 @@ contract MockUsdOracle is AggregatorV3Interface {
             uint80 answeredInRound
         )
     {
-        return (0, _prices[0], 0, block.timestamp, 0);
+        return (1, _prices[0], 0, block.timestamp, 0);
     }
 }
