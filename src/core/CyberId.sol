@@ -125,13 +125,10 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
      * @param cid The cid to register
      */
     function available(string calldata cid) public view returns (bool) {
+        require(middleware != address(0), "MIDDLEWARE_NOT_SET");
         bytes32 label = keccak256(bytes(cid));
         if (expiries[uint256(label)] == 0) {
-            if (middleware != address(0)) {
-                return ICyberIdMiddleware(middleware).namePatternValid(cid);
-            } else {
-                return true;
-            }
+            return ICyberIdMiddleware(middleware).namePatternValid(cid);
         }
         return false;
     }
@@ -196,10 +193,8 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
         uint8 durationYear,
         bytes calldata middlewareData
     ) external payable {
-        if (
-            middleware == address(0) ||
-            !ICyberIdMiddleware(middleware).skipCommit()
-        ) {
+        require(middleware != address(0), "MIDDLEWARE_NOT_SET");
+        if (!ICyberIdMiddleware(middleware).skipCommit()) {
             bytes32 commitment = generateCommit(
                 cid,
                 to,
@@ -221,19 +216,10 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
         }
 
         uint256 cost;
-        if (middleware != address(0)) {
-            cost = ICyberIdMiddleware(middleware).preRegister{
-                value: msg.value
-            }(
-                DataTypes.RegisterCyberIdParams(
-                    msg.sender,
-                    cid,
-                    to,
-                    durationYear
-                ),
-                middlewareData
-            );
-        }
+        cost = ICyberIdMiddleware(middleware).preRegister{ value: msg.value }(
+            DataTypes.RegisterCyberIdParams(msg.sender, cid, to, durationYear),
+            middlewareData
+        );
 
         _register(cid, to, durationYear, cost);
     }
@@ -250,6 +236,7 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
         uint8 durationYear,
         bytes calldata middlewareData
     ) external payable {
+        require(middleware != address(0), "MIDDLEWARE_NOT_SET");
         /* Revert if the cid's tokenId has never been registered */
         bytes32 label = keccak256(bytes(cid));
         uint256 tokenId = uint256(label);
@@ -267,12 +254,10 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
         }
 
         uint256 cost;
-        if (middleware != address(0)) {
-            cost = ICyberIdMiddleware(middleware).preRenew{ value: msg.value }(
-                DataTypes.RenewCyberIdParams(msg.sender, cid, durationYear),
-                middlewareData
-            );
-        }
+        cost = ICyberIdMiddleware(middleware).preRenew{ value: msg.value }(
+            DataTypes.RenewCyberIdParams(msg.sender, cid, durationYear),
+            middlewareData
+        );
 
         /**
          * Renew the name by setting the new expiration timestamp
@@ -294,6 +279,7 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
         string calldata cid,
         bytes calldata middlewareData
     ) external payable {
+        require(middleware != address(0), "MIDDLEWARE_NOT_SET");
         bytes32 label = keccak256(bytes(cid));
         uint256 tokenId = uint256(label);
         /* Revert if the token was never registered */
@@ -310,17 +296,15 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
         require(block.timestamp >= auctionStartTimestamp, "NOT_BIDDABLE");
 
         uint256 cost;
-        if (middleware != address(0)) {
-            cost = ICyberIdMiddleware(middleware).preBid{ value: msg.value }(
-                DataTypes.BidCyberIdParams(
-                    msg.sender,
-                    cid,
-                    to,
-                    auctionStartTimestamp
-                ),
-                middlewareData
-            );
-        }
+        cost = ICyberIdMiddleware(middleware).preBid{ value: msg.value }(
+            DataTypes.BidCyberIdParams(
+                msg.sender,
+                cid,
+                to,
+                auctionStartTimestamp
+            ),
+            middlewareData
+        );
 
         /**
          * Transfer the cid to the new owner by calling the ERC-721 transfer function, and update
@@ -444,10 +428,9 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
         address _middleware,
         bytes calldata data
     ) external onlyOwner {
+        require(_middleware != address(0), "ZERO_MIDDLEWARE");
         middleware = _middleware;
-        if (middleware != address(0)) {
-            ICyberIdMiddleware(middleware).setMwData(data);
-        }
+        ICyberIdMiddleware(_middleware).setMwData(data);
         emit MiddlewareSet(_middleware, data);
     }
 

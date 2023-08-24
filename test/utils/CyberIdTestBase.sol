@@ -5,6 +5,7 @@ pragma solidity 0.8.14;
 import "forge-std/Test.sol";
 import "../../src/core/CyberId.sol";
 import { DataTypes } from "../../src/libraries/DataTypes.sol";
+import { MockMiddleware } from "../utils/MockMiddleware.sol";
 
 abstract contract CyberIdTestBase is Test {
     CyberId public cid;
@@ -36,6 +37,8 @@ abstract contract CyberIdTestBase is Test {
     function setUp() public virtual {
         vm.startPrank(aliceAddress);
         cid = new CyberId("CYBER ID", "CYBERID", aliceAddress);
+        MockMiddleware middleware = new MockMiddleware();
+        cid.setMiddleware(address(middleware), new bytes(0));
         // set timestamp to startTs
         vm.warp(startTs);
         vm.deal(aliceAddress, startBalance);

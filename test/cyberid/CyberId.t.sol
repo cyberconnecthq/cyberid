@@ -158,7 +158,8 @@ contract CyberIdTest is CyberIdTestBase {
         cid.renew{ value: 1 ether }("alice", 1, "");
         assertEq(cid.expiries(cid.getTokenId("alice")), newExpiry);
         assertEq(aliceAddress.balance, startBalance - 2 ether);
-        assertEq(address(cid).balance, 2 ether);
+        assertEq(address(cid).balance, 0 ether);
+        assertEq(cid.middleware().balance, 2 ether);
     }
 
     function test_NorRegistered_Bid_RevertNotRegistered() public {
@@ -436,14 +437,13 @@ contract CyberIdTest is CyberIdTestBase {
     }
 
     function test_MiddlewareNotSet_SetMiddleware_Success() public {
-        assertEq(cid.middleware(), address(0));
         MockMiddleware middleware = new MockMiddleware();
         cid.setMiddleware(address(middleware), bytes("0x1234"));
         assertEq(cid.middleware(), address(middleware));
         assertEq(middleware.mwData(), bytes("0x1234"));
 
+        vm.expectRevert("ZERO_MIDDLEWARE");
         cid.setMiddleware(address(0), "");
-        assertEq(cid.middleware(), address(0));
     }
 
     /* solhint-disable func-name-mixedcase */
