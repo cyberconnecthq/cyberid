@@ -470,13 +470,8 @@ contract CyberId is ERC721, Ownable, MetadataResolver {
     }
 
     function _isGatedMetadataAuthorised(
-        uint256 tokenId
+        uint256
     ) internal view override returns (bool) {
-        /* Revert if cid was registered once and the expiration time has passed */
-        uint256 expiryTs = expiries[tokenId];
-        if (expiryTs != 0) {
-            require(block.timestamp < expiryTs, "EXPIRED");
-        }
         return owner() == msg.sender;
     }
 }
