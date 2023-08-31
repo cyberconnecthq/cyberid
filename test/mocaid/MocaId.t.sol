@@ -133,11 +133,20 @@ contract MocaIdTest is MocaIdTestBase {
         uint256 tokenId = mid.register(name, mocaNode, aliceAddress, "");
         assertEq(1, mid.totalSupply());
 
+        assertEq(0, mid.burnCounts(tokenId));
+        vm.expectEmit(true, true, true, true);
+        emit Burn(tokenId, 1);
         mid.burn(tokenId);
         assertEq(0, mid.totalSupply());
+        assertEq(1, mid.burnCounts(tokenId));
 
         mid.register(name, mocaNode, aliceAddress, "");
         assertEq(1, mid.totalSupply());
+
+        vm.expectEmit(true, true, true, true);
+        emit Burn(tokenId, 2);
+        mid.burn(tokenId);
+        assertEq(2, mid.burnCounts(tokenId));
     }
 
     function test_BaseUriNotSet_TokenUri_Success() public {

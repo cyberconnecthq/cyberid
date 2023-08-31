@@ -56,6 +56,11 @@ contract MocaId is
      */
     uint256 internal _mintCount;
 
+    /**
+     * @notice The number of burning for a tokenId.
+     */
+    mapping(uint256 => uint256) public burnCounts;
+
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -80,8 +85,9 @@ contract MocaId is
      * @dev Emit an event when a mocaId is burned.
      *
      * @param tokenId The tokenId of the mocaId
+     * @param burnCount The number of burning for the tokenId
      */
-    event Burn(uint256 indexed tokenId);
+    event Burn(uint256 indexed tokenId, uint256 burnCount);
 
     /**
      * @dev Emit an event when a middleware is set.
@@ -210,7 +216,7 @@ contract MocaId is
         delete parents[tokenId];
         super._burn(tokenId);
         --_mintCount;
-        emit Burn(tokenId);
+        emit Burn(tokenId, ++burnCounts[tokenId]);
     }
 
     /*//////////////////////////////////////////////////////////////

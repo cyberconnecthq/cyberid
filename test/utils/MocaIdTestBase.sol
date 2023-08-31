@@ -30,6 +30,7 @@ abstract contract MocaIdTestBase is Test {
         address indexed to,
         uint256 indexed tokenId
     );
+    event Burn(uint256 indexed tokenId, uint256 burnCount);
 
     function setUp() public virtual {
         vm.startPrank(bobAddress);

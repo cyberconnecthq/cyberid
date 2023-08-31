@@ -1,5 +1,5 @@
 | Contract      | Address                                    |
 | ------------- | ------------------------------------------ |
-| MocaId(Impl)  | 0xacabdd67166a9b56744d017c270e0fb8769ffba3 |
-| MocaId(Proxy) | 0x30887f2263bb3c8f71c80f8688e7726049df586c |
-| PermissionMw  | 0x0bb8771ac432dc0bc075434520c315a728568dbe |
+| MocaId(Impl)  | 0x9569d88f913ab7c066fd2bfa362bcf2db6afdf1a |
+| MocaId(Proxy) | 0x5904e2d41a677e6906243d2b0555c1dc73e7998c |
+| PermissionMw  | 0xa2668a6b7670e45944331b276626db873cabd24d |

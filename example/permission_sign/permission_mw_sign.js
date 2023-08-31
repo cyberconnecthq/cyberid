@@ -18,8 +18,8 @@ const types = {
 // *** IMPORTANT ***
 // update below values to correct values
 // ------------- contract addresses -------------
-const MocaIdAddress = "0x30887f2263bb3c8f71c80f8688e7726049df586c";
-const PermissionMwAddress = "0x0bb8771ac432dc0bc075434520c315a728568dbe";
+const MocaIdAddress = "0x5904e2d41a677e6906243d2b0555c1dc73e7998c";
+const PermissionMwAddress = "0xa2668a6b7670e45944331b276626db873cabd24d";
 
 // ------------- register params -------------
 // 2033-05-18T11:33:20, can be updated to a value that wish the signature to be expired
