@@ -3,13 +3,13 @@
 pragma solidity 0.8.14;
 
 import "forge-std/Test.sol";
-import "../../src/core/MocaId.sol";
+import "../../src/core/RealmId.sol";
 import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 import "forge-std/console.sol";
 
-abstract contract MocaIdTestBase is Test {
-    MocaId public mid;
+abstract contract RealmIdTestBase is Test {
+    RealmId public mid;
     uint256 public aliceSk = 666;
     address public aliceAddress = vm.addr(aliceSk);
     uint256 public bobSk = 888;
@@ -17,7 +17,7 @@ abstract contract MocaIdTestBase is Test {
     // 2023-05-22T17:25:30
     uint256 public startTs = 1684747530;
     uint256 public startBalance = 2000 ether;
-    bytes32 public mocaNode;
+    bytes32 public realmNode;
 
     event Register(
         string name,
@@ -34,21 +34,21 @@ abstract contract MocaIdTestBase is Test {
 
     function setUp() public virtual {
         vm.startPrank(bobAddress);
-        MocaId midImpl = new MocaId();
+        RealmId midImpl = new RealmId();
         ERC1967Proxy proxy = new ERC1967Proxy(
             address(midImpl),
             abi.encodeWithSelector(
-                MocaId.initialize.selector,
-                "MOCA ID",
-                "MOCAID",
+                RealmId.initialize.selector,
+                "Realm ID",
+                "RID",
                 aliceAddress
             )
         );
 
         vm.stopPrank();
         vm.startPrank(aliceAddress);
-        mid = MocaId(address(proxy));
-        mocaNode = mid.allowNode(
+        mid = RealmId(address(proxy));
+        realmNode = mid.allowNode(
             "moca",
             bytes32(0),
             true,

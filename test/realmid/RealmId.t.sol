@@ -2,35 +2,35 @@
 
 pragma solidity 0.8.14;
 
-import { MocaIdTestBase } from "../utils/MocaIdTestBase.sol";
+import { RealmIdTestBase } from "../utils/RealmIdTestBase.sol";
 import { MockMiddleware } from "../utils/MockMiddleware.sol";
 import { DataTypes } from "../../src/libraries/DataTypes.sol";
-import { MocaId } from "../../src/core/MocaId.sol";
+import { RealmId } from "../../src/core/RealmId.sol";
 
 import "forge-std/console.sol";
 
 /**
  * @dev All test names follow the pattern of "test_[GIVEN]_[WHEN]_[THEN]"
  */
-contract MocaIdTest is MocaIdTestBase {
+contract RealmIdTest is RealmIdTestBase {
     /* solhint-disable func-name-mixedcase */
     function test_MiddlewareNotSet_CheckNameAvailable_Available() public {
-        assertTrue(mid.available(unicode"alice", mocaNode));
-        assertTrue(mid.available(unicode"bob", mocaNode));
-        assertTrue(mid.available(unicode"bobb", mocaNode));
-        assertTrue(mid.available(unicode"三个字", mocaNode));
-        assertTrue(mid.available(unicode"四个字儿", mocaNode));
-        assertTrue(mid.available(unicode"😋😋😋", mocaNode));
-        assertTrue(mid.available(unicode"😋😋😋😋", mocaNode));
-        assertTrue(mid.available(unicode"    ", mocaNode));
-        assertTrue(mid.available(unicode"", mocaNode));
-        assertTrue(mid.available(unicode"bo", mocaNode));
-        assertTrue(mid.available(unicode"二字", mocaNode));
-        assertTrue(mid.available(unicode"😋😋", mocaNode));
-        assertTrue(mid.available("zerowidthcharacter\u200a\u200b", mocaNode));
-        assertTrue(mid.available("zerowidthcharacter\u200a\u200c", mocaNode));
-        assertTrue(mid.available("zerowidthcharacter\u200a\u200d", mocaNode));
-        assertTrue(mid.available("zerowidthcharacter\ufefe\ufeff", mocaNode));
+        assertTrue(mid.available(unicode"alice", realmNode));
+        assertTrue(mid.available(unicode"bob", realmNode));
+        assertTrue(mid.available(unicode"bobb", realmNode));
+        assertTrue(mid.available(unicode"三个字", realmNode));
+        assertTrue(mid.available(unicode"四个字儿", realmNode));
+        assertTrue(mid.available(unicode"😋😋😋", realmNode));
+        assertTrue(mid.available(unicode"😋😋😋😋", realmNode));
+        assertTrue(mid.available(unicode"    ", realmNode));
+        assertTrue(mid.available(unicode"", realmNode));
+        assertTrue(mid.available(unicode"bo", realmNode));
+        assertTrue(mid.available(unicode"二字", realmNode));
+        assertTrue(mid.available(unicode"😋😋", realmNode));
+        assertTrue(mid.available("zerowidthcharacter\u200a\u200b", realmNode));
+        assertTrue(mid.available("zerowidthcharacter\u200a\u200c", realmNode));
+        assertTrue(mid.available("zerowidthcharacter\u200a\u200d", realmNode));
+        assertTrue(mid.available("zerowidthcharacter\ufefe\ufeff", realmNode));
     }
 
     function test_NodeNotAllowed_CheckNameAvailable_NotAvailable() public {
@@ -59,34 +59,38 @@ contract MocaIdTest is MocaIdTestBase {
         string memory name = "test";
 
         vm.expectEmit(true, true, true, true);
-        emit Transfer(address(0), aliceAddress, mid.getTokenId(name, mocaNode));
+        emit Transfer(
+            address(0),
+            aliceAddress,
+            mid.getTokenId(name, realmNode)
+        );
         vm.expectEmit(true, true, true, true);
         emit Register(
             name,
-            mocaNode,
-            mid.getTokenId(name, mocaNode),
+            realmNode,
+            mid.getTokenId(name, realmNode),
             aliceAddress
         );
-        mid.register(name, mocaNode, aliceAddress, "");
+        mid.register(name, realmNode, aliceAddress, "");
     }
 
     function test_NameRegistered_RegisterAgain_RevertNameNotAvailable() public {
         string memory name = "test";
-        mid.register(name, mocaNode, aliceAddress, "");
+        mid.register(name, realmNode, aliceAddress, "");
         vm.expectRevert("NAME_NOT_AVAILABLE");
-        mid.register(name, mocaNode, aliceAddress, "");
+        mid.register(name, realmNode, aliceAddress, "");
     }
 
     function test_NameRegistered_QueryAvailable_NotAvailable() public {
-        assertTrue(mid.available("test", mocaNode));
+        assertTrue(mid.available("test", realmNode));
         string memory name = "test";
-        mid.register(name, mocaNode, aliceAddress, "");
-        assertFalse(mid.available("test", mocaNode));
+        mid.register(name, realmNode, aliceAddress, "");
+        assertFalse(mid.available("test", realmNode));
     }
 
     function test_NameRegistered_Transfer_RevertNowAllowed() public {
         string memory name = "test";
-        uint256 tokenId = mid.register(name, mocaNode, aliceAddress, "");
+        uint256 tokenId = mid.register(name, realmNode, aliceAddress, "");
         vm.expectRevert("TRANSFER_NOT_ALLOWED");
         mid.transferFrom(aliceAddress, bobAddress, tokenId);
         vm.expectRevert("TRANSFER_NOT_ALLOWED");
@@ -97,7 +101,7 @@ contract MocaIdTest is MocaIdTestBase {
 
     function test_Unpause_Transfer_Success() public {
         string memory name = "test";
-        uint256 tokenId = mid.register(name, mocaNode, aliceAddress, "");
+        uint256 tokenId = mid.register(name, realmNode, aliceAddress, "");
         mid.unpause();
         mid.transferFrom(aliceAddress, bobAddress, tokenId);
         assertEq(mid.ownerOf(tokenId), bobAddress);
@@ -117,7 +121,7 @@ contract MocaIdTest is MocaIdTestBase {
         test_Unpause_Transfer_Success();
         mid.pause();
         string memory name = "test";
-        uint256 tokenId = mid.getTokenId(name, mocaNode);
+        uint256 tokenId = mid.getTokenId(name, realmNode);
         vm.expectRevert("TRANSFER_NOT_ALLOWED");
         mid.transferFrom(aliceAddress, bobAddress, tokenId);
         vm.expectRevert("TRANSFER_NOT_ALLOWED");
@@ -130,7 +134,7 @@ contract MocaIdTest is MocaIdTestBase {
         string memory name = "test";
         assertEq(0, mid.totalSupply());
 
-        uint256 tokenId = mid.register(name, mocaNode, aliceAddress, "");
+        uint256 tokenId = mid.register(name, realmNode, aliceAddress, "");
         assertEq(1, mid.totalSupply());
 
         assertEq(0, mid.burnCounts(tokenId));
@@ -140,7 +144,7 @@ contract MocaIdTest is MocaIdTestBase {
         assertEq(0, mid.totalSupply());
         assertEq(1, mid.burnCounts(tokenId));
 
-        mid.register(name, mocaNode, aliceAddress, "");
+        mid.register(name, realmNode, aliceAddress, "");
         assertEq(1, mid.totalSupply());
 
         vm.expectEmit(true, true, true, true);
@@ -150,7 +154,7 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_BaseUriNotSet_TokenUri_Success() public {
-        uint256 tokenId = mid.register("alice", mocaNode, aliceAddress, "");
+        uint256 tokenId = mid.register("alice", realmNode, aliceAddress, "");
         assertEq(
             mid.tokenURI(tokenId),
             "34381505080506270002041962522073071494230304175856376258432815400806256652646"
@@ -158,9 +162,9 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_BaseUriSet_TokenUri_Success() public {
-        uint256 tokenId = mid.register("alice", mocaNode, aliceAddress, "");
+        uint256 tokenId = mid.register("alice", realmNode, aliceAddress, "");
         string memory baseUri = "https://api.cyberconnect.dev/";
-        mid.setBaseTokenURI(mocaNode, baseUri);
+        mid.setBaseTokenURI(realmNode, baseUri);
         assertEq(
             mid.tokenURI(tokenId),
             string(
@@ -178,18 +182,18 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_MiddlewareNotSet_SetMiddleware_Success() public {
-        assertEq(mid.middlewares(mocaNode), address(0));
+        assertEq(mid.middlewares(realmNode), address(0));
         MockMiddleware middleware = new MockMiddleware();
-        mid.setMiddleware(mocaNode, address(middleware), bytes("0x1234"));
-        assertEq(mid.middlewares(mocaNode), address(middleware));
+        mid.setMiddleware(realmNode, address(middleware), bytes("0x1234"));
+        assertEq(mid.middlewares(realmNode), address(middleware));
         assertEq(middleware.mwData(), bytes("0x1234"));
 
-        mid.setMiddleware(mocaNode, address(0), "");
-        assertEq(mid.middlewares(mocaNode), address(0));
+        mid.setMiddleware(realmNode, address(0), "");
+        assertEq(mid.middlewares(realmNode), address(0));
     }
 
     function test_NameRegistered_SetMetadata_ReadSuccess() public {
-        uint256 tokenId = mid.register("alice", mocaNode, aliceAddress, "");
+        uint256 tokenId = mid.register("alice", realmNode, aliceAddress, "");
 
         string memory avatarKey = "avatar";
         string
@@ -205,7 +209,7 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_NameNotRegistered_SetMetadata_RevertInvalidToken() public {
-        uint256 tokenId = mid.getTokenId("alice", mocaNode);
+        uint256 tokenId = mid.getTokenId("alice", realmNode);
         string memory avatarKey = "avatar";
         string
             memory avatarValue = "ipfs://Qmb5YRL6hjutLUF2dw5V5WGjQCip4e1WpRo8w3iFss4cWB";
@@ -217,7 +221,7 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_MetadataSet_ClearMetadata_ReadSuccess() public {
-        uint256 tokenId = mid.register("alice", mocaNode, aliceAddress, "");
+        uint256 tokenId = mid.register("alice", realmNode, aliceAddress, "");
 
         DataTypes.MetadataPair[]
             memory metadatas = new DataTypes.MetadataPair[](2);
@@ -232,7 +236,7 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_MetadataSet_ClearMetadataByOthers_RevertUnAuth() public {
-        uint256 tokenId = mid.register("alice", mocaNode, aliceAddress, "");
+        uint256 tokenId = mid.register("alice", realmNode, aliceAddress, "");
 
         DataTypes.MetadataPair[]
             memory metadatas = new DataTypes.MetadataPair[](2);
@@ -250,7 +254,7 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_NameRegistered_SetGatedMetadata_ReadSuccess() public {
-        uint256 tokenId = mid.register("alice", mocaNode, aliceAddress, "");
+        uint256 tokenId = mid.register("alice", realmNode, aliceAddress, "");
 
         string memory avatarKey = "avatar";
         string
@@ -268,7 +272,7 @@ contract MocaIdTest is MocaIdTestBase {
     function test_NameNotRegistered_SetGatedMetadata_RevertInvalidToken()
         public
     {
-        uint256 tokenId = mid.getTokenId("alice", mocaNode);
+        uint256 tokenId = mid.getTokenId("alice", realmNode);
         string memory avatarKey = "avatar";
         string
             memory avatarValue = "ipfs://Qmb5YRL6hjutLUF2dw5V5WGjQCip4e1WpRo8w3iFss4cWB";
@@ -280,7 +284,7 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_GatedMetadataSet_ClearGatedMetadata_ReadSuccess() public {
-        uint256 tokenId = mid.register("alice", mocaNode, aliceAddress, "");
+        uint256 tokenId = mid.register("alice", realmNode, aliceAddress, "");
 
         DataTypes.MetadataPair[]
             memory metadatas = new DataTypes.MetadataPair[](2);
@@ -297,7 +301,7 @@ contract MocaIdTest is MocaIdTestBase {
     function test_GatedMetadataSet_ClearGatedMetadataByOthers_RevertUnAuth()
         public
     {
-        uint256 tokenId = mid.register("alice", mocaNode, aliceAddress, "");
+        uint256 tokenId = mid.register("alice", realmNode, aliceAddress, "");
 
         DataTypes.MetadataPair[]
             memory metadatas = new DataTypes.MetadataPair[](2);
@@ -315,7 +319,7 @@ contract MocaIdTest is MocaIdTestBase {
     }
 
     function test_AliceIsOwner_BobUpgradeContract_ReverNotOwner() public {
-        mid.register("alice", mocaNode, aliceAddress, "");
+        mid.register("alice", realmNode, aliceAddress, "");
         vm.stopPrank();
         vm.startPrank(bobAddress);
         vm.expectRevert("NOT_OWNER");
@@ -325,10 +329,10 @@ contract MocaIdTest is MocaIdTestBase {
     function test_NameRegistered_UpgradeContract_NameIsStillRegistered()
         public
     {
-        mid.register("alice", mocaNode, aliceAddress, "");
-        MocaId implV2 = new MocaId();
+        mid.register("alice", realmNode, aliceAddress, "");
+        RealmId implV2 = new RealmId();
         mid.upgradeTo(address(implV2));
-        assertEq(mid.ownerOf(mid.getTokenId("alice", mocaNode)), aliceAddress);
+        assertEq(mid.ownerOf(mid.getTokenId("alice", realmNode)), aliceAddress);
     }
 
     function test_CheckEIP137() public {

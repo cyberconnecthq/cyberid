@@ -5,12 +5,12 @@ pragma solidity 0.8.14;
 import "forge-std/Vm.sol";
 
 import { CyberId } from "../../src/core/CyberId.sol";
-import { MocaId } from "../../src/core/MocaId.sol";
+import { RealmId } from "../../src/core/RealmId.sol";
 import { DeploySetting } from "./DeploySetting.sol";
 import { LibString } from "../../src/libraries/LibString.sol";
 import { Create2Deployer } from "../../src/deployer/Create2Deployer.sol";
 import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
-import { PermissionMw } from "../../src/middlewares/mocaid/PermissionMw.sol";
+import { PermissionMw } from "../../src/middlewares/realmid/PermissionMw.sol";
 import { StableFeeMiddleware } from "../../src/middlewares/cyberid/StableFeeMiddleware.sol";
 import { TrustOnlyMiddleware } from "../../src/middlewares/cyberid/TrustOnlyMiddleware.sol";
 
@@ -107,24 +107,24 @@ library LibDeploy {
         _write(vm, "TrustOnlyMiddleware", trustOnlyMw);
     }
 
-    function deployMocaId(
+    function deployRealmId(
         Vm vm,
         DeploySetting.DeployParameters memory params
     ) internal {
         Create2Deployer dc = Create2Deployer(params.deployerContract);
-        address mocaIdImpl = address(new MocaId());
+        address realmIdImpl = address(new RealmId());
 
-        _write(vm, "MocaId(Impl)", mocaIdImpl);
+        _write(vm, "RealmId(Impl)", realmIdImpl);
 
-        address mocaIdProxy = dc.deploy(
+        address realmIdProxy = dc.deploy(
             abi.encodePacked(
                 type(ERC1967Proxy).creationCode,
                 abi.encode(
-                    mocaIdImpl,
+                    realmIdImpl,
                     abi.encodeWithSelector(
-                        MocaId.initialize.selector,
-                        "MOCA ID",
-                        "MOCAID",
+                        RealmId.initialize.selector,
+                        "Realm ID",
+                        "RID",
                         msg.sender
                     )
                 )
@@ -132,11 +132,11 @@ library LibDeploy {
             SALT
         );
 
-        _write(vm, "MocaId(Proxy)", mocaIdProxy);
+        _write(vm, "RealmId(Proxy)", realmIdProxy);
 
-        address permissionMw = address(new PermissionMw(mocaIdProxy));
+        address permissionMw = address(new PermissionMw(realmIdProxy));
 
-        MocaId(mocaIdProxy).allowNode(
+        RealmId(realmIdProxy).allowNode(
             "moca",
             bytes32(0),
             true,

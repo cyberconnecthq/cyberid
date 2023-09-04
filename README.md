@@ -5,12 +5,12 @@
 Id smart contracts for CyberConnect ecosystem. The repo consists of 2 top-level and core smart contracts:
 
 - `CyberId` - the contract that manages the `.cyber` handle of a user
-- `MocaId` - the contract that manages the `.moca` handle of a user
+- `RealmId` - the contract that manages the `.moca` handle of a user
 
 ## Table of Contents
 
 1. [CyberId](#1-cyberid)
-2. [MocaId](#2-mocaid)
+2. [RealmId](#2-realmid)
 3. [Development](#3-development)
 
 ## 1. CyberId
@@ -19,11 +19,11 @@ Id smart contracts for CyberConnect ecosystem. The repo consists of 2 top-level 
 TODO
 ```
 
-## 2. MocaId
+## 2. RealmId
 
-The `MocaId` contract issues `MocaId` for the mocaverse network.
+The `RealmId` contract issues `RealmId` for the realmverse network.
 
-A `MocaId` is a **non-transferable** ERC-721 token that represents a unique name like @alice. The mint rule is decided by programmable middleware. After minting, users can set/get arbitrary metadata to/from the token to provide a flexible and transparent mechanism for storing and managing associated information.
+A `RealmId` is a **non-transferable** ERC-721 token that represents a unique name like @alice. The mint rule is decided by programmable middleware. After minting, users can set/get arbitrary metadata to/from the token to provide a flexible and transparent mechanism for storing and managing associated information.
 
 ### State Machine
 
@@ -37,10 +37,10 @@ A `MocaId` is a **non-transferable** ERC-721 token that represents a unique name
          registered --> registerable: burn
 ```
 
-The `MocaId` state transitions when users take certain actions:
+The `RealmId` state transitions when users take certain actions:
 
-- `register` - mint a new `MocaId`
-- `burn` - burn an owning `MocaId`
+- `register` - mint a new `RealmId`
+- `burn` - burn an owning `RealmId`
 
 ### Upgradability
 
@@ -51,20 +51,20 @@ The contract follows the [UUPSUpgradable](https://docs.openzeppelin.com/contract
 
 ### Metadata
 
-Each `MocaId` has a metadata map attached to it. The metadata map can be set with arbitrary keys and values. The data type of keys and values are `string`. Users or approved operators can
+Each `RealmId` has a metadata map attached to it. The metadata map can be set with arbitrary keys and values. The data type of keys and values are `string`. Users or approved operators can
 
 - `batchSetMetadatas` - overwrites metadata kv pairs
 - `clearMetadatas` - clears all metadata kv pairs without knowing keys
 - `getMetadata` - gets a single metadata kv pair
 
-When a `MocaId` moves from `registered` to `registerable`, `clearMetadatas` is performed for users.
+When a `RealmId` moves from `registered` to `registerable`, `clearMetadatas` is performed for users.
 
 ### Middleware
 
 The contract follows a middleware architecture to create more design space for customized logic. Middlewares are plug-and-play custom execution logic code that runs before and after `register`. Developers can customize several rules:
 
-- The `MocaId` pattern (e.g. Only allow 0-9 and lower cases)
-- Charge (e.g. Free or requires erc20 tokens based on `MocaId` length)
+- The `RealmId` pattern (e.g. Only allow 0-9 and lower cases)
+- Charge (e.g. Free or requires erc20 tokens based on `RealmId` length)
 - Permission (e.g. Only Signer or anyone can `register`)
 - …
 
@@ -107,7 +107,7 @@ The contract defines one owner address that has permission to operate:
 
 ### Deploy Contracts
 
-We use [Create2Deployer](./src/deployer/Create2Deployer.sol) to ensure proxy contracts are deployed deterministically. Take Deploying `MocaId` on Polygon testnet(mumbai) as an example, the deployment process is:
+We use [Create2Deployer](./src/deployer/Create2Deployer.sol) to ensure proxy contracts are deployed deterministically. Take Deploying `RealmId` on Polygon testnet(mumbai) as an example, the deployment process is:
 
 0. Step 1-3 is one-time work. Go to step 4 if you have done it once.
 
@@ -127,8 +127,8 @@ We use [Create2Deployer](./src/deployer/Create2Deployer.sol) to ensure proxy con
 
 4. Update the `deployerContract` in the `MUMBAI` block in [DeploySetting.sol](./script/libraries/DeploySetting.sol)
 
-5. Deploy `MocaId`
+5. Deploy `RealmId`
 
-   `yarn deploy_mocaid:mumbai`
+   `yarn deploy_realmid:mumbai`
 
 Finally, you can write your yarn entry points in [package.json] to customize and repeat your deployment process.

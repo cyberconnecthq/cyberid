@@ -1,6 +1,6 @@
 require("dotenv").config();
 const { ethers } = require("ethers");
-const MocaIdAbi = require("../../docs/abi/MocaId.json");
+const RealmIdAbi = require("../../docs/abi/RealmId.json");
 const PermissionMwAbi = require("../../docs/abi/PermissionMw.json");
 
 // EIP712 types
@@ -18,8 +18,8 @@ const types = {
 // *** IMPORTANT ***
 // update below values to correct values
 // ------------- contract addresses -------------
-const MocaIdAddress = "0x5904e2d41a677e6906243d2b0555c1dc73e7998c";
-const PermissionMwAddress = "0xa2668a6b7670e45944331b276626db873cabd24d";
+const RealmIdAddress = "0x1ef669e1a6d2aeef4741761488d473ece9810b05";
+const PermissionMwAddress = "0x31f627dc0030334e62f8ca53c3cf730bb8417081";
 
 // ------------- register params -------------
 // 2033-05-18T11:33:20, can be updated to a value that wish the signature to be expired
@@ -28,7 +28,7 @@ const deadline = 2000000000;
 const nameToRegister = "jack";
 // the address to register to
 const to = "0x2E0446079705B6Bacc4730fB3EDA5DA68aE5Fe4D";
-const mocaNode =
+const realmNode =
   "0xbfa0715290784075e564f966fffd9898ace1d7814f833780f62e59b079135746";
 // *** IMPORTANT ***
 
@@ -40,7 +40,7 @@ const register = async () => {
   // in production, we can use the signer EOA to sign and use different EOA to broadcast the transaction
   const wallet = new ethers.Wallet(privateKey, provider);
 
-  // the contract address may change if the MocaId contract set new middlewares
+  // the contract address may change if the RealmId contract set new middlewares
   const domain = {
     name: "PermissionMw",
     version: "1",
@@ -49,7 +49,7 @@ const register = async () => {
   };
 
   const permissionMwContract = new ethers.Contract(
-    // MocaId contract address
+    // RealmId contract address
     PermissionMwAddress,
     PermissionMwAbi,
     wallet
@@ -61,7 +61,7 @@ const register = async () => {
   const message = {
     name: nameToRegister,
     to: to,
-    parentNode: mocaNode,
+    parentNode: realmNode,
     nonce: nonce.toNumber(),
     deadline: deadline,
   };
@@ -78,13 +78,18 @@ const register = async () => {
   );
 
   // register the name using the signature data
-  const mocaIdContract = new ethers.Contract(
-    // MocaId contract address
-    MocaIdAddress,
-    MocaIdAbi,
+  const realmIdContract = new ethers.Contract(
+    // RealmId contract address
+    RealmIdAddress,
+    RealmIdAbi,
     wallet
   );
-  const tx = await mocaIdContract.register(nameToRegister, mocaNode, to, data);
+  const tx = await realmIdContract.register(
+    nameToRegister,
+    realmNode,
+    to,
+    data
+  );
   await tx.wait();
   console.log("Transaction hash:", tx.hash);
 };

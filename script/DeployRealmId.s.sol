@@ -6,13 +6,13 @@ import "forge-std/Script.sol";
 import { DeploySetting } from "./libraries/DeploySetting.sol";
 import { LibDeploy } from "./libraries/LibDeploy.sol";
 
-contract DeployMocaId is Script, DeploySetting {
+contract DeployRealmId is Script, DeploySetting {
     function run() external {
         _setDeployParams();
         vm.startBroadcast();
 
         if (block.chainid == DeploySetting.MUMBAI) {
-            LibDeploy.deployMocaId(vm, deployParams);
+            LibDeploy.deployRealmId(vm, deployParams);
         }
         vm.stopBroadcast();
     }

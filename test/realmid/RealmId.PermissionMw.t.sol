@@ -3,42 +3,42 @@
 pragma solidity 0.8.14;
 
 import "forge-std/Test.sol";
-import { MocaIdTestBase } from "../utils/MocaIdTestBase.sol";
-import { PermissionMw } from "../../src/middlewares/mocaid/PermissionMw.sol";
+import { RealmIdTestBase } from "../utils/RealmIdTestBase.sol";
+import { PermissionMw } from "../../src/middlewares/realmid/PermissionMw.sol";
 import { Constants } from "../../src/libraries/Constants.sol";
 import { TestLib712 } from "../utils/TestLib712.sol";
 
 /**
  * @dev All test names follow the pattern of "test_[GIVEN]_[WHEN]_[THEN]"
  */
-contract MocaIdPermissionMwTest is MocaIdTestBase {
+contract RealmIdPermissionMwTest is RealmIdTestBase {
     address public mw;
 
     function setUp() public override {
         super.setUp();
         PermissionMw permissionMw = new PermissionMw(address(mid));
         mw = address(permissionMw);
-        mid.setMiddleware(mocaNode, mw, abi.encode(aliceAddress));
+        mid.setMiddleware(realmNode, mw, abi.encode(aliceAddress));
     }
 
     /* solhint-disable func-name-mixedcase */
     function test_NameNotRegistered_CheckNameAvailable_Available() public {
         // 1 letter
-        assertTrue(mid.available("1", mocaNode));
+        assertTrue(mid.available("1", realmNode));
         // 20 letters
-        assertTrue(mid.available("123456789abcdefghiz_", mocaNode));
+        assertTrue(mid.available("123456789abcdefghiz_", realmNode));
         // utf8 characters
-        assertFalse(mid.available(unicode"中文", mocaNode));
+        assertFalse(mid.available(unicode"中文", realmNode));
         // utf8 characters
-        assertFalse(mid.available(unicode"😋", mocaNode));
+        assertFalse(mid.available(unicode"😋", realmNode));
         // 0 letter
-        assertFalse(mid.available("", mocaNode));
+        assertFalse(mid.available("", realmNode));
         // space
-        assertFalse(mid.available(" ", mocaNode));
+        assertFalse(mid.available(" ", realmNode));
         // dash
-        assertFalse(mid.available("-", mocaNode));
+        assertFalse(mid.available("-", realmNode));
         // 21 letters
-        assertFalse(mid.available("123456789abcdefghiz_1", mocaNode));
+        assertFalse(mid.available("123456789abcdefghiz_1", realmNode));
     }
 
     function test_MiddlewareCreated_SetDataFromNonNameRegistry_RevertUnauthorized()
@@ -59,7 +59,7 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
                 abi.encode(
                     Constants._REGISTER_TYPEHASH,
                     keccak256(bytes(name)),
-                    mocaNode,
+                    realmNode,
                     aliceAddress,
                     0,
                     deadline
@@ -71,17 +71,21 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceSk, digest);
 
         vm.expectEmit(true, true, true, true);
-        emit Transfer(address(0), aliceAddress, mid.getTokenId(name, mocaNode));
+        emit Transfer(
+            address(0),
+            aliceAddress,
+            mid.getTokenId(name, realmNode)
+        );
         vm.expectEmit(true, true, true, true);
         emit Register(
             name,
-            mocaNode,
-            mid.getTokenId(name, mocaNode),
+            realmNode,
+            mid.getTokenId(name, realmNode),
             aliceAddress
         );
         mid.register(
             name,
-            mocaNode,
+            realmNode,
             aliceAddress,
             abi.encode(v, r, s, deadline)
         );
@@ -98,7 +102,7 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
                 abi.encode(
                     Constants._REGISTER_TYPEHASH,
                     keccak256(bytes(name)),
-                    mocaNode,
+                    realmNode,
                     aliceAddress,
                     0,
                     deadline
@@ -111,14 +115,14 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
 
         mid.register(
             name,
-            mocaNode,
+            realmNode,
             aliceAddress,
             abi.encode(v, r, s, deadline)
         );
         vm.expectRevert("INVALID_SIGNATURE");
         mid.register(
             name,
-            mocaNode,
+            realmNode,
             aliceAddress,
             abi.encode(v, r, s, deadline)
         );
@@ -148,7 +152,7 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
         vm.expectRevert("DEADLINE_EXCEEDED");
         mid.register(
             name,
-            mocaNode,
+            realmNode,
             aliceAddress,
             abi.encode(v, r, s, deadline)
         );
@@ -178,7 +182,7 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
         vm.expectRevert("INVALID_SIGNATURE");
         mid.register(
             name,
-            mocaNode,
+            realmNode,
             aliceAddress,
             abi.encode(v, r, s, deadline)
         );
@@ -208,7 +212,7 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
         vm.expectRevert("INVALID_SIGNATURE");
         mid.register(
             name,
-            mocaNode,
+            realmNode,
             aliceAddress,
             abi.encode(v, r, s, deadline)
         );
@@ -238,7 +242,7 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
         vm.expectRevert("INVALID_SIGNATURE");
         mid.register(
             name,
-            mocaNode,
+            realmNode,
             aliceAddress,
             abi.encode(v, r, s, deadline)
         );
@@ -268,7 +272,7 @@ contract MocaIdPermissionMwTest is MocaIdTestBase {
         vm.expectRevert("INVALID_SIGNATURE");
         mid.register(
             name,
-            mocaNode,
+            realmNode,
             aliceAddress,
             abi.encode(v, r, s, deadline)
         );

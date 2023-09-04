@@ -15,7 +15,7 @@ import { DataTypes } from "../libraries/DataTypes.sol";
 
 import { MetadataResolver } from "../base/MetadataResolver.sol";
 
-contract MocaId is
+contract RealmId is
     Initializable,
     ERC721Upgradeable,
     OwnableUpgradeable,
@@ -40,7 +40,7 @@ contract MocaId is
     mapping(bytes32 => address) public middlewares;
 
     /**
-     * @notice The allowed parent nodes of the mocaId.
+     * @notice The allowed parent nodes of the realmId.
      * e.g. namehash('moca'), namehash('music')
      * https://eips.ethereum.org/EIPS/eip-137
      */
@@ -52,7 +52,7 @@ contract MocaId is
     mapping(uint256 => bytes32) public parents;
 
     /**
-     * @notice The number of mocaIds minted.
+     * @notice The number of realmIds minted.
      */
     uint256 internal _mintCount;
 
@@ -66,13 +66,13 @@ contract MocaId is
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @dev Emit an event when a mocaId is registered.
-     * For example, when "user.moca" is registered, the name is "user" and the parent node is namehash("moca").
+     * @dev Emit an event when a realmId is registered.
+     * For example, when "user.realm" is registered, the name is "user" and the parent node is namehash("realm").
      *
-     * @param name         The name of the mocaId
-     * @param parentNode   The parent node of the mocaId
-     * @param tokenId      The tokenId of the mocaId
-     * @param to           The address that owns the mocaId
+     * @param name         The name of the realmId
+     * @param parentNode   The parent node of the realmId
+     * @param tokenId      The tokenId of the realmId
+     * @param to           The address that owns the realmId
      */
     event Register(
         string name,
@@ -82,9 +82,9 @@ contract MocaId is
     );
 
     /**
-     * @dev Emit an event when a mocaId is burned.
+     * @dev Emit an event when a realmId is burned.
      *
-     * @param tokenId The tokenId of the mocaId
+     * @param tokenId The tokenId of the realmId
      * @param burnCount The number of burning for the tokenId
      */
     event Burn(uint256 indexed tokenId, uint256 burnCount);
@@ -158,10 +158,10 @@ contract MocaId is
     //////////////////////////////////////////////////////////////*/
 
     /**
-     * @notice Checks if a mocaId is available for registration.
+     * @notice Checks if a realmId is available for registration.
      *
      * @param _name       The name to check
-     * @param parentNode The parent node of the mocaId
+     * @param parentNode The parent node of the realmId
      */
     function available(
         string calldata _name,
@@ -181,11 +181,11 @@ contract MocaId is
     }
 
     /**
-     * @notice Mints a new mocaId.
+     * @notice Mints a new realmId.
      *
      * @param _name       The name to register
-     * @param parentNode The parent node of the mocaId
-     * @param to         The address that will own the mocaId
+     * @param parentNode The parent node of the realmId
+     * @param to         The address that will own the realmId
      * @param preData    The register data for preprocess.
      * @return uint256   Minted tokenId
      */
@@ -257,7 +257,7 @@ contract MocaId is
     /**
      * @notice Returns a distinct URI for a tokenId
      *
-     * @param tokenId The uint256 tokenId of the mocaId
+     * @param tokenId The uint256 tokenId of the realmId
      */
     function tokenURI(
         uint256 tokenId
@@ -346,7 +346,7 @@ contract MocaId is
 
     /**
      * @notice allows node. E.g. '.moca', '.music'.
-     * So that users can register mocaId like 'abc.moca', 'abc.music'.
+     * So that users can register realmId like 'abc.moca', 'abc.music'.
      * @dev allowNode("moca", bytes32(0)) to allow ".moca"
      */
     function allowNode(

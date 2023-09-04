@@ -4,7 +4,7 @@ import * as path from "path";
 const writeAbi = async () => {
   const folders = [
     "CyberId.sol/CyberId.json",
-    "MocaId.sol/MocaId.json",
+    "RealmId.sol/RealmId.json",
     "PermissionMw.sol/PermissionMw.json",
     "StableFeeMiddleware.sol/StableFeeMiddleware.json",
     "TrustOnlyMiddleware.sol/TrustOnlyMiddleware.json",
