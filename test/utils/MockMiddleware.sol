@@ -31,20 +31,6 @@ contract MockMiddleware is IMiddleware, ICyberIdMiddleware {
         return 0;
     }
 
-    function preRenew(
-        DataTypes.RenewCyberIdParams calldata,
-        bytes calldata
-    ) external payable override returns (uint256) {
-        return 0;
-    }
-
-    function preBid(
-        DataTypes.BidCyberIdParams calldata,
-        bytes calldata
-    ) external payable override returns (uint256) {
-        return 0;
-    }
-
     function namePatternValid(
         string calldata
     ) external pure override(IMiddleware, ICyberIdMiddleware) returns (bool) {

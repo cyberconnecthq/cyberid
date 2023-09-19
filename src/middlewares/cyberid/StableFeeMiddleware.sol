@@ -113,96 +113,7 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware, ReentrancyGuard {
         nonReentrant
         returns (uint256)
     {
-        uint256 cost = getPriceWei(params.cid, params.durationYear);
-        _chargeAndRefundOverPayment(cost, params.msgSender);
-        return cost;
-    }
-
-    /// @inheritdoc ICyberIdMiddleware
-    function preRenew(
-        DataTypes.RenewCyberIdParams calldata params,
-        bytes calldata
-    )
-        external
-        payable
-        override
-        onlyNameRegistry
-        nonReentrant
-        returns (uint256)
-    {
-        uint256 cost = getPriceWei(params.cid, params.durationYear);
-        _chargeAndRefundOverPayment(cost, params.msgSender);
-        return cost;
-    }
-
-    /// @inheritdoc ICyberIdMiddleware
-    function preBid(
-        DataTypes.BidCyberIdParams calldata params,
-        bytes calldata
-    )
-        external
-        payable
-        override
-        onlyNameRegistry
-        nonReentrant
-        returns (uint256)
-    {
-        /**
-         * Calculate the bid price for the dutch auction which the dutchPremium + renewalFee.
-         *
-         * dutchPremium starts at 1,000 ETH and decreases by 10% every 4,605 seconds:
-         * dutchPremium = 1000 ether * (0.9)^(numPeriods)
-         * numPeriods = (block.timestamp - auctionStartTimestamp) / 4_605
-         *
-         * numPeriods is calculated with fixed-point multiplication which causes a slight error
-         * that increases the price (DivErr), while dutchPremium is calculated by the identity
-         * (x^y = exp(ln(x) * y)) which loses 3 digits of precision and lowers the price (ExpErr).
-         * The two errors interact in different ways keeping the price slightly higher or lower
-         * than expected as shown below:
-         *
-         * +=========+======================+========================+========================+
-         * | Periods |        NoErr         |         DivErr         |    PowErr + DivErr     |
-         * +=========+======================+========================+========================+
-         * |       1 |                900.0 | 900.000000000000606876 | 900.000000000000606000 |
-         * +---------+----------------------+------------------------+------------------------+
-         * |      10 |          348.6784401 | 348.678440100002351164 | 348.678440100002351000 |
-         * +---------+----------------------+------------------------+------------------------+
-         * |     100 | 0.026561398887587476 |   0.026561398887589867 |   0.026561398887589000 |
-         * +---------+----------------------+------------------------+------------------------+
-         * |     393 | 0.000000000000001040 |   0.000000000000001040 |   0.000000000000001000 |
-         * +---------+----------------------+------------------------+------------------------+
-         * |     394 |                  0.0 |                    0.0 |                    0.0 |
-         * +---------+----------------------+------------------------+------------------------+
-         *
-         * The values are not precomputed since space is the major constraint in this contract.
-         *
-         * Safety: auctionStartTimestamp <= block.timestamp and their difference will be under
-         * 10^10 for the next 50 years, which can be safely multiplied with _DIV_4605_UD60X18
-         *
-         * Safety/Audit: cost calcuation cannot intuitively over or underflow, but needs proof
-         */
-
-        uint256 cost;
-        uint256 baseFee = getPriceWei(params.cid, 1);
-
-        unchecked {
-            int256 periodsSD59x18 = int256(
-                (block.timestamp - params.auctionStartTimestamp) *
-                    _DIV_4605_UD60X18
-            );
-
-            cost =
-                _BID_START_PRICE.mulWadDown(
-                    uint256(
-                        FixedPointMathLib.powWad(
-                            int256(_BID_PERIOD_DECREASE_UD60X18),
-                            periodsSD59x18
-                        )
-                    )
-                ) +
-                baseFee;
-        }
-
+        uint256 cost = getPriceWei(params.cid);
         _chargeAndRefundOverPayment(cost, params.msgSender);
         return cost;
     }
@@ -211,34 +122,28 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware, ReentrancyGuard {
                             PUBLIC VIEW
     //////////////////////////////////////////////////////////////*/
 
-    function getPriceWei(
-        string calldata cid,
-        uint durationYear
-    ) public view returns (uint256) {
-        return _attoUSDToWei(_getUSDPrice(cid, durationYear));
+    function getPriceWei(string calldata cid) public view returns (uint256) {
+        return _attoUSDToWei(_getUSDPrice(cid));
     }
 
     /*//////////////////////////////////////////////////////////////
                              INTERNAL LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function _getUSDPrice(
-        string calldata cid,
-        uint durationYear
-    ) internal view returns (uint256) {
+    function _getUSDPrice(string calldata cid) internal view returns (uint256) {
         uint256 len = cid.strlen();
         uint256 usdPrice;
 
         if (len >= 5) {
-            usdPrice = price5Letter * durationYear * 365 days;
+            usdPrice = price5Letter;
         } else if (len == 4) {
-            usdPrice = price4Letter * durationYear * 365 days;
+            usdPrice = price4Letter;
         } else if (len == 3) {
-            usdPrice = price3Letter * durationYear * 365 days;
+            usdPrice = price3Letter;
         } else if (len == 2) {
-            usdPrice = price2Letter * durationYear * 365 days;
+            usdPrice = price2Letter;
         } else {
-            usdPrice = price1Letter * durationYear * 365 days;
+            usdPrice = price1Letter;
         }
         return usdPrice;
     }

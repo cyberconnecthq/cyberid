@@ -29,28 +29,6 @@ interface ICyberIdMiddleware {
     ) external payable returns (uint256);
 
     /**
-     * @notice Process that runs before the renew happens.
-     *
-     * @param params The params for renew cid.
-     * @param data Extra data to process.
-     */
-    function preRenew(
-        DataTypes.RenewCyberIdParams calldata params,
-        bytes calldata data
-    ) external payable returns (uint256);
-
-    /**
-     * @notice Process that runs before the bid happens.
-     *
-     * @param params The params for bid cid.
-     * @param data Extra data to process.
-     */
-    function preBid(
-        DataTypes.BidCyberIdParams calldata params,
-        bytes calldata data
-    ) external payable returns (uint256);
-
-    /**
      * @notice Validates the name pattern.
      *
      * @param name The name to validate.

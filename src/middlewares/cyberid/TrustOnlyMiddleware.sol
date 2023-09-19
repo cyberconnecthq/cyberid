@@ -41,24 +41,6 @@ contract TrustOnlyMiddleware is Ownable, LowerCaseCyberIdMiddleware {
         return 0;
     }
 
-    /// @inheritdoc ICyberIdMiddleware
-    function preRenew(
-        DataTypes.RenewCyberIdParams calldata params,
-        bytes calldata
-    ) external payable override returns (uint256) {
-        require(params.msgSender == owner(), "NOT_TRUSTED_CALLER");
-        return 0;
-    }
-
-    /// @inheritdoc ICyberIdMiddleware
-    function preBid(
-        DataTypes.BidCyberIdParams calldata params,
-        bytes calldata
-    ) external payable override returns (uint256) {
-        require(params.msgSender == owner(), "NOT_TRUSTED_CALLER");
-        return 0;
-    }
-
     /// @inheritdoc Ownable
     function renounceOwnership() public view override onlyOwner {
         revert("NOT_ALLOWED");

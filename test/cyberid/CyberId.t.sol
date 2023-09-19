@@ -59,59 +59,40 @@ contract CyberIdTest is CyberIdTestBase {
 
     function test_NotCommitted_Register_RevertNotCommitted() public {
         vm.expectRevert("NOT_COMMITTED");
-        cid.register("alice", aliceAddress, secret, 1, "");
+        cid.register("alice", aliceAddress, secret, "");
     }
 
     function test_CommitExpired_Register_RevertNotCommitted() public {
         cid.commit(commitment);
         vm.warp(startTs + 10 minutes + 1 seconds);
         vm.expectRevert("NOT_COMMITTED");
-        cid.register("alice", aliceAddress, secret, 1, "");
+        cid.register("alice", aliceAddress, secret, "");
     }
 
     function test_Committed_RegisterWithin60Seconds_RevertTooQuick() public {
         cid.commit(commitment);
         vm.warp(startTs + 60 seconds);
         vm.expectRevert("REGISTER_TOO_QUICK");
-        cid.register("alice", aliceAddress, secret, 1, "");
-    }
-
-    function test_Committed_WrongDurationRegister_RevertWrongDuration() public {
-        cid.commit(commitment);
-        vm.warp(startTs + 61 seconds);
-        vm.expectRevert("MIN_DURATION_ONE_YEAR");
-        cid.register("alice", aliceAddress, secret, 0, "");
+        cid.register("alice", aliceAddress, secret, "");
     }
 
     function test_Registered_RegisterAgain_RevertNotCommitted() public {
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
-        cid.register("alice", aliceAddress, secret, 1, "");
+        cid.register("alice", aliceAddress, secret, "");
         vm.expectRevert("NOT_COMMITTED");
-        cid.register("alice", aliceAddress, secret, 1, "");
+        cid.register("alice", aliceAddress, secret, "");
     }
 
     function test_NameRegisteredByOthers_Register_RevertInvalidName() public {
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
-        cid.register("alice", aliceAddress, secret, 1, "");
+        cid.register("alice", aliceAddress, secret, "");
 
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds * 2);
-        vm.expectRevert("NAME_NOT_AVAILABLE");
-        cid.register("alice", aliceAddress, secret, 1, "");
-    }
-
-    function test_NameExpired_Register_RevertTokenExists() public {
-        cid.commit(commitment);
-        vm.warp(startTs + 61 seconds);
-        cid.register("alice", aliceAddress, secret, 1, "");
-
-        vm.warp(startTs + 61 seconds + 365 days + 30 days);
-        cid.commit(commitment);
-        vm.warp(startTs + 61 seconds + 365 days + 30 days + 61 seconds);
-        vm.expectRevert("NAME_NOT_AVAILABLE");
-        cid.register("alice", aliceAddress, secret, 1, "");
+        vm.expectRevert("ERC721: token already minted");
+        cid.register("alice", aliceAddress, secret, "");
     }
 
     function test_Committed_Register_Success() public {
@@ -120,61 +101,10 @@ contract CyberIdTest is CyberIdTestBase {
         vm.expectEmit(true, true, true, true);
         emit Transfer(address(0), aliceAddress, cid.getTokenId("alice"));
         vm.expectEmit(true, true, true, true);
-        emit Register(
-            "alice",
-            aliceAddress,
-            startTs + 61 seconds + 365 days,
-            0
-        );
-        cid.register("alice", aliceAddress, secret, 1, "");
+        emit Register("alice", aliceAddress, cid.getTokenId("alice"), 0);
+        cid.register("alice", aliceAddress, secret, "");
         assertEq(aliceAddress.balance, startBalance);
         assertEq(address(cid).balance, 0);
-    }
-
-    function test_NotRegistered_Renew_RevertNotRegistered() public {
-        vm.expectRevert("NOT_REGISTERED");
-        cid.renew("alice", 1, "");
-    }
-
-    function test_Registered_AfterGracePeriodRenew_RevertNotRenewable() public {
-        cid.commit(commitment);
-        vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
-
-        vm.warp(startTs + 61 seconds + 365 days + 30 days);
-        vm.expectRevert("NOT_RENEWABLE");
-        cid.renew("alice", 1, "");
-    }
-
-    function test_Registered_WithinGracePeriodRenew_NameRenewed() public {
-        cid.commit(commitment);
-        vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
-
-        uint256 newExpiry = startTs + 61 seconds + 365 days + 365 days;
-        vm.warp(startTs + 61 seconds + 365 days + 30 days - 1 seconds);
-        vm.expectEmit(true, true, true, true);
-        emit Renew("alice", newExpiry, 0);
-        cid.renew{ value: 1 ether }("alice", 1, "");
-        assertEq(cid.expiries(cid.getTokenId("alice")), newExpiry);
-        assertEq(aliceAddress.balance, startBalance - 2 ether);
-        assertEq(address(cid).balance, 0 ether);
-        assertEq(cid.middleware().balance, 2 ether);
-    }
-
-    function test_NorRegistered_Bid_RevertNotRegistered() public {
-        vm.expectRevert("NOT_REGISTERED");
-        cid.bid(aliceAddress, "alice", "");
-    }
-
-    function test_NameWithinGracePeriod_Bid_RevertNotBiddable() public {
-        cid.commit(commitment);
-        vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
-
-        vm.warp(startTs + 61 seconds + 365 days + 30 days - 1 seconds);
-        vm.expectRevert("NOT_BIDDABLE");
-        cid.bid(aliceAddress, "alice", "");
     }
 
     function test_NotRegistered_OwnerOf_RevertInvalidTokenId() public {
@@ -186,24 +116,14 @@ contract CyberIdTest is CyberIdTestBase {
     function test_Registered_OwnerOf_Success() public {
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
+        cid.register{ value: 1 ether }("alice", aliceAddress, secret, "");
 
         assertEq(cid.ownerOf(cid.getTokenId("alice")), aliceAddress);
     }
 
-    function test_Registered_ExpiredOwnerOf_RevertExpired() public {
-        cid.commit(commitment);
-        vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
-
-        vm.warp(startTs + 61 seconds + 365 days);
-        uint256 tokenId = cid.getTokenId("alice");
-        vm.expectRevert("EXPIRED");
-        cid.ownerOf(tokenId);
-    }
-
     function test_NotRegistered_SafeTransferFrom_RevertInvalidToken() public {
         uint256 tokenId = cid.getTokenId("alice");
+        cid.unpause();
         vm.expectRevert("ERC721: invalid token ID");
         cid.safeTransferFrom(aliceAddress, bobAddress, tokenId, "");
     }
@@ -211,27 +131,18 @@ contract CyberIdTest is CyberIdTestBase {
     function test_Registered_SafeTransferFrom_Success() public {
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
+        cid.register{ value: 1 ether }("alice", aliceAddress, secret, "");
 
         uint256 tokenId = cid.getTokenId("alice");
+        cid.unpause();
         vm.expectEmit(true, true, true, true);
         emit Transfer(aliceAddress, bobAddress, tokenId);
         cid.safeTransferFrom(aliceAddress, bobAddress, tokenId, "");
     }
 
-    function test_NameExpired_SafeTransferFrom_RevertExpired() public {
-        cid.commit(commitment);
-        vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
-
-        vm.warp(startTs + 61 seconds + 365 days);
-        uint256 tokenId = cid.getTokenId("alice");
-        vm.expectRevert("EXPIRED");
-        cid.safeTransferFrom(aliceAddress, bobAddress, tokenId, "");
-    }
-
     function test_NotRegistered_SafeTransferFrom2_RevertInvalidToken() public {
         uint256 tokenId = cid.getTokenId("alice");
+        cid.unpause();
         vm.expectRevert("ERC721: invalid token ID");
         cid.safeTransferFrom(aliceAddress, bobAddress, tokenId);
     }
@@ -239,54 +150,39 @@ contract CyberIdTest is CyberIdTestBase {
     function test_Registered_SafeTransferFrom2_Success() public {
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
+        cid.register{ value: 1 ether }("alice", aliceAddress, secret, "");
 
         uint256 tokenId = cid.getTokenId("alice");
+        cid.unpause();
         vm.expectEmit(true, true, true, true);
         emit Transfer(aliceAddress, bobAddress, tokenId);
         cid.safeTransferFrom(aliceAddress, bobAddress, tokenId);
     }
 
-    function test_NameExpired_SafeTransferFrom2_RevertExpired() public {
-        cid.commit(commitment);
-        vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
-
-        vm.warp(startTs + 61 seconds + 365 days);
-        uint256 tokenId = cid.getTokenId("alice");
-        vm.expectRevert("EXPIRED");
-        cid.safeTransferFrom(aliceAddress, bobAddress, tokenId);
-    }
-
     function test_NotRegistered_TransferFrom_RevertInvalidToken() public {
         uint256 tokenId = cid.getTokenId("alice");
+        cid.unpause();
         vm.expectRevert("ERC721: invalid token ID");
-        cid.transferFrom(aliceAddress, bobAddress, tokenId);
-    }
-
-    function test_NameExpired_TransferFrom_RevertExpired() public {
-        cid.commit(commitment);
-        vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
-
-        vm.warp(startTs + 61 seconds + 365 days);
-        uint256 tokenId = cid.getTokenId("alice");
-        vm.expectRevert("EXPIRED");
         cid.transferFrom(aliceAddress, bobAddress, tokenId);
     }
 
     function test_Registered_TransferFrom_Success() public {
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
+        cid.register{ value: 1 ether }("alice", aliceAddress, secret, "");
 
         uint256 tokenId = cid.getTokenId("alice");
+        cid.unpause();
         vm.expectEmit(true, true, true, true);
         emit Transfer(aliceAddress, bobAddress, tokenId);
         cid.transferFrom(aliceAddress, bobAddress, tokenId);
     }
 
     function test_BaseUriNotSet_TokenUri_Success() public {
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }("alice", aliceAddress, secret, "");
+
         uint256 tokenId = cid.getTokenId("alice");
         assertEq(
             cid.tokenURI(tokenId),
@@ -295,8 +191,11 @@ contract CyberIdTest is CyberIdTestBase {
     }
 
     function test_BaseUriSet_TokenUri_Success() public {
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }("alice", aliceAddress, secret, "");
         string memory baseUri = "https://api.cyberconnect.dev/";
-        cid.setBaseTokenUri(baseUri);
+        cid.setBaseTokenURI(baseUri);
         uint256 tokenId = cid.getTokenId("alice");
         assertEq(
             cid.tokenURI(tokenId),
@@ -312,7 +211,7 @@ contract CyberIdTest is CyberIdTestBase {
     function test_NameRegistered_SetMetadata_ReadSuccess() public {
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
+        cid.register{ value: 1 ether }("alice", aliceAddress, secret, "");
 
         uint256 tokenId = cid.getTokenId("alice");
         string memory avatarKey = "avatar";
@@ -326,23 +225,6 @@ contract CyberIdTest is CyberIdTestBase {
         metadatas[0] = DataTypes.MetadataPair(avatarKey, unicode"中文");
         cid.batchSetMetadatas(tokenId, metadatas);
         assertEq(unicode"中文", cid.getMetadata(tokenId, avatarKey));
-    }
-
-    function test_NameExpired_SetMetadata_RevertExpired() public {
-        cid.commit(commitment);
-        vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
-
-        uint256 tokenId = cid.getTokenId("alice");
-        string memory avatarKey = "avatar";
-        string
-            memory avatarValue = "ipfs://Qmb5YRL6hjutLUF2dw5V5WGjQCip4e1WpRo8w3iFss4cWB";
-        DataTypes.MetadataPair[]
-            memory metadatas = new DataTypes.MetadataPair[](1);
-        metadatas[0] = DataTypes.MetadataPair(avatarKey, avatarValue);
-        vm.warp(startTs + 61 seconds + 365 days);
-        vm.expectRevert("EXPIRED");
-        cid.batchSetMetadatas(tokenId, metadatas);
     }
 
     function test_NameNotRegistered_SetMetadata_RevertInvalidToken() public {
@@ -360,7 +242,7 @@ contract CyberIdTest is CyberIdTestBase {
     function test_MetadataSet_ClearMetadata_ReadSuccess() public {
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
+        cid.register{ value: 1 ether }("alice", aliceAddress, secret, "");
 
         uint256 tokenId = cid.getTokenId("alice");
         DataTypes.MetadataPair[]
@@ -375,50 +257,10 @@ contract CyberIdTest is CyberIdTestBase {
         assertEq(cid.getMetadata(tokenId, "2"), "");
     }
 
-    function test_MetadataSet_BidByNewOwner_MetadataCleared() public {
-        cid.commit(commitment);
-        vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
-
-        uint256 tokenId = cid.getTokenId("alice");
-        DataTypes.MetadataPair[]
-            memory metadatas = new DataTypes.MetadataPair[](2);
-        metadatas[0] = DataTypes.MetadataPair("1", "1");
-        metadatas[1] = DataTypes.MetadataPair("2", "2");
-        cid.batchSetMetadatas(tokenId, metadatas);
-        assertEq(cid.getMetadata(tokenId, "1"), "1");
-        assertEq(cid.getMetadata(tokenId, "2"), "2");
-
-        vm.warp(startTs + 61 seconds + 365 days + 30 days);
-        cid.bid{ value: 1 ether }(bobAddress, "alice", "");
-        assertEq(cid.getMetadata(tokenId, "1"), "");
-        assertEq(cid.getMetadata(tokenId, "2"), "");
-    }
-
-    function test_MetadataSet_BidBySameOwner_MetadataNotCleared() public {
-        cid.commit(commitment);
-        vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
-
-        uint256 tokenId = cid.getTokenId("alice");
-        DataTypes.MetadataPair[]
-            memory metadatas = new DataTypes.MetadataPair[](2);
-        metadatas[0] = DataTypes.MetadataPair("1", "1");
-        metadatas[1] = DataTypes.MetadataPair("2", "2");
-        cid.batchSetMetadatas(tokenId, metadatas);
-        assertEq(cid.getMetadata(tokenId, "1"), "1");
-        assertEq(cid.getMetadata(tokenId, "2"), "2");
-
-        vm.warp(startTs + 61 seconds + 365 days + 30 days);
-        cid.bid{ value: 1 ether }(aliceAddress, "alice", "");
-        assertEq(cid.getMetadata(tokenId, "1"), "1");
-        assertEq(cid.getMetadata(tokenId, "2"), "2");
-    }
-
     function test_MetadataSet_ClearMetadataByOthers_RevertUnAuth() public {
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, 1, "");
+        cid.register{ value: 1 ether }("alice", aliceAddress, secret, "");
 
         uint256 tokenId = cid.getTokenId("alice");
         DataTypes.MetadataPair[]

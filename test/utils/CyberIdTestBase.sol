@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 import "../../src/core/CyberId.sol";
 import { DataTypes } from "../../src/libraries/DataTypes.sol";
 import { MockMiddleware } from "../utils/MockMiddleware.sol";
+import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 abstract contract CyberIdTestBase is Test {
     CyberId public cid;
@@ -23,7 +24,7 @@ abstract contract CyberIdTestBase is Test {
     event Register(
         string cid,
         address indexed to,
-        uint256 expiry,
+        uint256 indexed tokenId,
         uint256 cost
     );
     event Transfer(
@@ -31,12 +32,21 @@ abstract contract CyberIdTestBase is Test {
         address indexed to,
         uint256 indexed tokenId
     );
-    event Renew(string cid, uint256 expiry, uint256 cost);
-    event Bid(string cid, uint256 expiry, uint256 cost);
 
     function setUp() public virtual {
         vm.startPrank(aliceAddress);
-        cid = new CyberId("CYBER ID", "CYBERID", aliceAddress);
+        CyberId cidImpl = new CyberId();
+        ERC1967Proxy proxy = new ERC1967Proxy(
+            address(cidImpl),
+            abi.encodeWithSelector(
+                CyberId.initialize.selector,
+                "CYBER ID",
+                "CYBERID",
+                aliceAddress
+            )
+        );
+        cid = CyberId(address(proxy));
+        cid.grantRole(keccak256(bytes("OPERATOR_ROLE")), aliceAddress);
         MockMiddleware middleware = new MockMiddleware();
         cid.setMiddleware(address(middleware), new bytes(0));
         // set timestamp to startTs
