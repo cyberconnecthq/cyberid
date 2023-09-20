@@ -11,7 +11,7 @@ contract DeployCyberId is Script, DeploySetting {
         _setDeployParams();
         vm.startBroadcast();
 
-        if (block.chainid == DeploySetting.BASE_GOERLI) {
+        if (block.chainid == DeploySetting.OP_GOERLI) {
             LibDeploy.deployCyberId(vm, deployParams);
         }
         vm.stopBroadcast();
