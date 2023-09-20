@@ -27,4 +27,9 @@ library DataTypes {
         string cid;
         address to;
     }
+
+    struct BatchRegisterCyberIdParams {
+        string cid;
+        address to;
+    }
 }

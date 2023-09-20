@@ -8,6 +8,8 @@ import { MockWallet } from "../utils/MockWallet.sol";
 import { DataTypes } from "../../src/libraries/DataTypes.sol";
 import { CyberIdTestBase } from "../utils/CyberIdTestBase.sol";
 import { MockMiddleware } from "../utils/MockMiddleware.sol";
+import { IAccessControlEnumerableUpgradeable } from "openzeppelin-upgradeable/contracts/access/IAccessControlEnumerableUpgradeable.sol";
+import { IERC721Upgradeable } from "openzeppelin-upgradeable/contracts/token/ERC721/IERC721Upgradeable.sol";
 
 /**
  * @dev All test names follow the pattern of "test_[GIVEN]_[WHEN]_[THEN]"
@@ -107,6 +109,42 @@ contract CyberIdTest is CyberIdTestBase {
         assertEq(address(cid).balance, 0);
     }
 
+    function test_Registered_Burn_Success() public {
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register("alice", aliceAddress, secret, "");
+        assertEq(cid.totalSupply(), 1);
+
+        cid.burn(cid.getTokenId("alice"));
+        assertEq(cid.totalSupply(), 0);
+    }
+
+    function test_Registered_BurnOthers_RevertUnauthorized() public {
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register("alice", aliceAddress, secret, "");
+        assertEq(cid.totalSupply(), 1);
+
+        vm.startPrank(bobAddress);
+        uint256 tokenId = cid.getTokenId("alice");
+        vm.expectRevert("UNAUTHORIZED");
+        cid.burn(tokenId);
+    }
+
+    function test_SupportsInterface_IAccessControlEnumerableUpgradeable_Success()
+        public
+    {
+        assertTrue(
+            cid.supportsInterface(
+                type(IAccessControlEnumerableUpgradeable).interfaceId
+            )
+        );
+    }
+
+    function test_SupportsInterface_IERC721Upgradeable_Success() public {
+        assertTrue(cid.supportsInterface(type(IERC721Upgradeable).interfaceId));
+    }
+
     function test_NotRegistered_OwnerOf_RevertInvalidTokenId() public {
         uint256 tokenId = cid.getTokenId("alice");
         vm.expectRevert("ERC721: invalid token ID");
@@ -137,6 +175,39 @@ contract CyberIdTest is CyberIdTestBase {
         cid.unpause();
         vm.expectEmit(true, true, true, true);
         emit Transfer(aliceAddress, bobAddress, tokenId);
+        cid.safeTransferFrom(aliceAddress, bobAddress, tokenId, "");
+    }
+
+    function test_RegisteredButPaused_SafeTransferFrom_RevertNotAllowed()
+        public
+    {
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }("alice", aliceAddress, secret, "");
+
+        uint256 tokenId = cid.getTokenId("alice");
+        vm.expectRevert("TRANSFER_NOT_ALLOWED");
+        cid.safeTransferFrom(aliceAddress, bobAddress, tokenId, "");
+    }
+
+    function test_RegisteredButPaused_UnpauseAndPause_RevertNotAllowed()
+        public
+    {
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register{ value: 1 ether }("alice", aliceAddress, secret, "");
+
+        uint256 tokenId = cid.getTokenId("alice");
+        cid.unpause();
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(aliceAddress, bobAddress, tokenId);
+        cid.safeTransferFrom(aliceAddress, bobAddress, tokenId, "");
+        vm.startPrank(bobAddress);
+        cid.safeTransferFrom(bobAddress, aliceAddress, tokenId, "");
+
+        vm.startPrank(aliceAddress);
+        cid.pause();
+        vm.expectRevert("TRANSFER_NOT_ALLOWED");
         cid.safeTransferFrom(aliceAddress, bobAddress, tokenId, "");
     }
 

@@ -330,6 +330,15 @@ contract CyberId is
         return uint256(keccak256(bytes(cid)));
     }
 
+    /**
+     * @notice Gets total number of tokens in existence, burned tokens will reduce the count.
+     *
+     * @return uint256 The total supply.
+     */
+    function totalSupply() external view virtual returns (uint256) {
+        return _supplyCount;
+    }
+
     /*//////////////////////////////////////////////////////////////
                             OPERATOR ONLY
     //////////////////////////////////////////////////////////////*/
@@ -345,15 +354,6 @@ contract CyberId is
     }
 
     /**
-     * @notice Gets total number of tokens in existence, burned tokens will reduce the count.
-     *
-     * @return uint256 The total supply.
-     */
-    function totalSupply() external view virtual returns (uint256) {
-        return _supplyCount;
-    }
-
-    /**
      * @notice Sets the middleware and data.
      */
     function setMiddleware(
@@ -364,6 +364,14 @@ contract CyberId is
         middleware = _middleware;
         ICyberIdMiddleware(_middleware).setMwData(data);
         emit MiddlewareSet(_middleware, data);
+    }
+
+    function batchRegister(
+        DataTypes.BatchRegisterCyberIdParams[] calldata params
+    ) external onlyRole(_OPERATOR_ROLE) {
+        for (uint256 i = 0; i < params.length; i++) {
+            _register(params[i].cid, params[i].to, 0);
+        }
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -408,9 +416,8 @@ contract CyberId is
     }
 
     function _isGatedMetadataAuthorised(
-        uint256 tokenId
+        uint256
     ) internal view override returns (bool) {
-        require(_exists(tokenId), "TOKEN_NOT_MINTED");
         return hasRole(_OPERATOR_ROLE, msg.sender);
     }
 }
