@@ -32,7 +32,7 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
             address(stableFeeMw),
             abi.encode(
                 treasuryAddress,
-                [uint256(0), 0, 20294266869609, 5073566717402, 158548959919]
+                [uint256(0), 0, 640 ether, 160 ether, 5 ether]
             )
         );
         preData = abi.encode(uint80(1));
@@ -50,8 +50,8 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
         assertTrue(cid.available(unicode"alice"));
         assertTrue(cid.available(unicode"bob"));
         assertTrue(cid.available(unicode"bobb"));
-        assertFalse(cid.available(unicode"1_"));
-        assertFalse(cid.available(unicode"_"));
+        assertTrue(cid.available(unicode"1_"));
+        assertTrue(cid.available(unicode"_"));
         assertFalse(cid.available(unicode"三个字"));
         assertFalse(cid.available(unicode"四个字儿"));
         assertFalse(cid.available(unicode"😋😋😋"));

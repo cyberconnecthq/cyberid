@@ -131,6 +131,28 @@ contract CyberIdTest is CyberIdTestBase {
         cid.burn(tokenId);
     }
 
+    function test_WithoutRole_BatchRegister_RevertUnauthorized() public {
+        DataTypes.BatchRegisterCyberIdParams[]
+            memory params = new DataTypes.BatchRegisterCyberIdParams[](2);
+        params[0] = DataTypes.BatchRegisterCyberIdParams("alice", aliceAddress);
+        params[1] = DataTypes.BatchRegisterCyberIdParams("bob", bobAddress);
+        vm.startPrank(bobAddress);
+        vm.expectRevert(
+            "AccessControl: account 0x440d9ab59a4ed2f575666c23ef8c17c53a96e3e0 is missing role 0x97667070c54ef182b0f5858b034beac1b6f3089aa2d3188bb1e8929f4fa9b929"
+        );
+        cid.batchRegister(params);
+    }
+
+    function test_WithRole_BatchRegister_RevertUnauthorized() public {
+        DataTypes.BatchRegisterCyberIdParams[]
+            memory params = new DataTypes.BatchRegisterCyberIdParams[](2);
+        params[0] = DataTypes.BatchRegisterCyberIdParams("alice", aliceAddress);
+        params[1] = DataTypes.BatchRegisterCyberIdParams("bob", bobAddress);
+        cid.batchRegister(params);
+        assertEq(cid.ownerOf(cid.getTokenId("alice")), aliceAddress);
+        assertEq(cid.ownerOf(cid.getTokenId("bob")), bobAddress);
+    }
+
     function test_SupportsInterface_IAccessControlEnumerableUpgradeable_Success()
         public
     {

@@ -3,20 +3,15 @@
 pragma solidity 0.8.14;
 
 import { AggregatorV3Interface } from "chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
-import { FixedPointMathLib } from "solmate/src/utils/FixedPointMathLib.sol";
 import { ReentrancyGuard } from "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
 import { ICyberIdMiddleware } from "../../interfaces/ICyberIdMiddleware.sol";
 
-import { LibString } from "../../libraries/LibString.sol";
 import { DataTypes } from "../../libraries/DataTypes.sol";
 
 import { LowerCaseCyberIdMiddleware } from "./base/LowerCaseCyberIdMiddleware.sol";
 
 contract StableFeeMiddleware is LowerCaseCyberIdMiddleware, ReentrancyGuard {
-    using LibString for *;
-    using FixedPointMathLib for uint256;
-
     /*//////////////////////////////////////////////////////////////
                             STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -39,20 +34,7 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware, ReentrancyGuard {
     uint256 public price5Letter;
 
     /*//////////////////////////////////////////////////////////////
-                                CONSTANTS
-    //////////////////////////////////////////////////////////////*/
-
-    /// @dev 60.18-decimal fixed-point that approximates divide by 4,605 when multiplied
-    uint256 internal constant _DIV_4605_UD60X18 = 2.17166666666666e14;
-
-    /// @dev Starting price of every bid during the first period
-    uint256 internal constant _BID_START_PRICE = 1000 ether;
-
-    /// @dev 60.18-decimal fixed-point that decreases the price by 10% when multiplied
-    uint256 internal constant _BID_PERIOD_DECREASE_UD60X18 = 0.9 ether;
-
-    /*//////////////////////////////////////////////////////////////
-                                 EVENTS
+                            EVENTS
     //////////////////////////////////////////////////////////////*/
 
     event MwDataChanged(
@@ -131,7 +113,8 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware, ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
 
     function _getUSDPrice(string calldata cid) internal view returns (uint256) {
-        uint256 len = cid.strlen();
+        // LowerCaseCyberIdMiddleware ensures that each cid character only occupies 1 byte
+        uint256 len = bytes(cid).length;
         uint256 usdPrice;
 
         if (len >= 5) {
