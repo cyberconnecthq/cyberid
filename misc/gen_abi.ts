@@ -8,6 +8,7 @@ const writeAbi = async () => {
     "PermissionMw.sol/PermissionMw.json",
     "StableFeeMiddleware.sol/StableFeeMiddleware.json",
     "TrustOnlyMiddleware.sol/TrustOnlyMiddleware.json",
+    "PermissionMiddleware.sol/PermissionMiddleware.json",
   ];
   const ps = folders.map(async (file) => {
     const f = await fs.readFile(path.join("./out", file), "utf8");
