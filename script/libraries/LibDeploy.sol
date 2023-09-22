@@ -81,28 +81,49 @@ library LibDeploy {
         Vm vm,
         DeploySetting.DeployParameters memory params
     ) internal {
-        // Create2Deployer dc = Create2Deployer(params.deployerContract);
+        Create2Deployer dc = Create2Deployer(params.deployerContract);
         address cyberIdImpl = address(new CyberId());
         _write(vm, "CyberId(Impl)", cyberIdImpl);
         address cyberIdProxy = address(
-            new ERC1967Proxy(
-                cyberIdImpl,
-                abi.encodeWithSelector(
-                    CyberId.initialize.selector,
-                    "CYBER ID",
-                    "CYBERID",
-                    msg.sender
-                )
+            dc.deploy(
+                abi.encodePacked(
+                    type(ERC1967Proxy).creationCode,
+                    abi.encode(
+                        cyberIdImpl,
+                        abi.encodeWithSelector(
+                            CyberId.initialize.selector,
+                            "CYBER ID",
+                            "CYBERID",
+                            msg.sender
+                        )
+                    )
+                ),
+                SALT
             )
         );
+
         _write(vm, "CyberId(Proxy)", cyberIdProxy);
 
         address stableFeeMw = address(
-            new StableFeeMiddleware(params.usdOracle, cyberIdProxy)
+            dc.deploy(
+                abi.encodePacked(
+                    type(StableFeeMiddleware).creationCode,
+                    abi.encode(params.usdOracle, cyberIdProxy)
+                ),
+                SALT
+            )
         );
         _write(vm, "StableFeeMiddleware", stableFeeMw);
 
-        address permissionMw = address(new PermissionMiddleware(cyberIdProxy));
+        address permissionMw = address(
+            dc.deploy(
+                abi.encodePacked(
+                    type(PermissionMiddleware).creationCode,
+                    abi.encode(cyberIdProxy)
+                ),
+                SALT
+            )
+        );
         _write(vm, "PermissionMiddleware", permissionMw);
 
         CyberId(cyberIdProxy).grantRole(

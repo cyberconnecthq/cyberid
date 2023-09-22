@@ -80,7 +80,13 @@ contract CyberIdPermissionMwTest is CyberIdTestBase {
         vm.expectEmit(true, true, true, true);
         emit Transfer(address(0), aliceAddress, cid.getTokenId(name));
         vm.expectEmit(true, true, true, true);
-        emit Register(name, aliceAddress, cid.getTokenId(name), 0);
+        emit Register(
+            aliceAddress,
+            aliceAddress,
+            cid.getTokenId(name),
+            name,
+            0
+        );
         cid.register(
             name,
             aliceAddress,

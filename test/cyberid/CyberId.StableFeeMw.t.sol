@@ -104,7 +104,13 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
         vm.expectEmit(true, true, true, true);
         emit Transfer(address(0), aliceAddress, cid.getTokenId("alice"));
         vm.expectEmit(true, true, true, true);
-        emit Register("alice", aliceAddress, cid.getTokenId("alice"), cost);
+        emit Register(
+            aliceAddress,
+            aliceAddress,
+            cid.getTokenId("alice"),
+            "alice",
+            cost
+        );
         cid.register{ value: startBalance }(
             "alice",
             aliceAddress,

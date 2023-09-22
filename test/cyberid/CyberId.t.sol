@@ -103,7 +103,13 @@ contract CyberIdTest is CyberIdTestBase {
         vm.expectEmit(true, true, true, true);
         emit Transfer(address(0), aliceAddress, cid.getTokenId("alice"));
         vm.expectEmit(true, true, true, true);
-        emit Register("alice", aliceAddress, cid.getTokenId("alice"), 0);
+        emit Register(
+            aliceAddress,
+            aliceAddress,
+            cid.getTokenId("alice"),
+            "alice",
+            0
+        );
         cid.register("alice", aliceAddress, secret, "");
         assertEq(aliceAddress.balance, startBalance);
         assertEq(address(cid).balance, 0);

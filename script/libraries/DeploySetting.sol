@@ -18,18 +18,18 @@ contract DeploySetting {
     function _setDeployParams() internal {
         if (block.chainid == BASE_GOERLI) {
             deployParams.deployerContract = address(
-                0xa6B0Df5d90eE6881b39da6DBCA36ebD44e6428D8
+                0xF191131dAB798dD6c500816338d4B6EBC34825C7
             );
             deployParams.usdOracle = address(
                 0xcD2A119bD1F7DF95d706DE6F2057fDD45A0503E2
             );
         } else if (block.chainid == MUMBAI) {
             deployParams.deployerContract = address(
-                0x277c467cB75175E8a2821FAB1054dC3745C19bA4
+                0xF191131dAB798dD6c500816338d4B6EBC34825C7
             );
         } else if (block.chainid == OP_GOERLI) {
             deployParams.deployerContract = address(
-                0x277c467cB75175E8a2821FAB1054dC3745C19bA4
+                0xF191131dAB798dD6c500816338d4B6EBC34825C7
             );
             deployParams.usdOracle = address(
                 0x57241A37733983F97C4Ab06448F244A1E0Ca0ba8

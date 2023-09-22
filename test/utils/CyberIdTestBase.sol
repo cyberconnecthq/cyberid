@@ -22,9 +22,10 @@ abstract contract CyberIdTestBase is Test {
     uint256 public startBalance = 2000 ether;
 
     event Register(
-        string cid,
+        address indexed from,
         address indexed to,
         uint256 indexed tokenId,
+        string cid,
         uint256 cost
     );
     event Transfer(

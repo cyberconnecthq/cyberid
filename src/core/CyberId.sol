@@ -56,24 +56,27 @@ contract CyberId is
     /**
      * @dev Emit an event when a cid is registered.
      *
-     * @param cid     The cid
+     * @param from    The address that registered the cid
      * @param to      The address that owns the cid
      * @param tokenId The tokenId of the cid
+     * @param cid     The cid
      * @param cost    The cost of the registration
      */
     event Register(
-        string cid,
+        address indexed from,
         address indexed to,
         uint256 indexed tokenId,
+        string cid,
         uint256 cost
     );
 
     /**
      * @dev Emit an event when a cid is burnt.
      *
+     * @param from    The address that burnt the cid
      * @param tokenId The tokenId of the cid
      */
-    event Burn(uint256 indexed tokenId);
+    event Burn(address indexed from, uint256 indexed tokenId);
 
     /**
      * @dev Emit an event when middleware is set.
@@ -235,7 +238,7 @@ contract CyberId is
             middlewareData
         );
 
-        _register(cid, to, cost);
+        _register(msg.sender, cid, to, cost);
     }
 
     /**
@@ -249,7 +252,7 @@ contract CyberId is
         _clearGatedMetadatas(tokenId);
         super._burn(tokenId);
         --_supplyCount;
-        emit Burn(tokenId);
+        emit Burn(msg.sender, tokenId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -370,7 +373,7 @@ contract CyberId is
         DataTypes.BatchRegisterCyberIdParams[] calldata params
     ) external onlyRole(_OPERATOR_ROLE) {
         for (uint256 i = 0; i < params.length; i++) {
-            _register(params[i].cid, params[i].to, 0);
+            _register(msg.sender, params[i].cid, params[i].to, 0);
         }
     }
 
@@ -400,13 +403,18 @@ contract CyberId is
                              INTERNAL LOGIC
     //////////////////////////////////////////////////////////////*/
 
-    function _register(string calldata cid, address to, uint256 cost) internal {
+    function _register(
+        address from,
+        string calldata cid,
+        address to,
+        uint256 cost
+    ) internal {
         require(available(cid), "NAME_NOT_AVAILABLE");
         bytes32 label = keccak256(bytes(cid));
         uint256 tokenId = uint256(label);
         super._safeMint(to, tokenId);
         _supplyCount++;
-        emit Register(cid, to, tokenId, cost);
+        emit Register(from, to, tokenId, cid, cost);
     }
 
     function _isMetadataAuthorised(
