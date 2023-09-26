@@ -100,6 +100,11 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware, ReentrancyGuard {
         return cost;
     }
 
+    /// @inheritdoc ICyberIdMiddleware
+    function skipCommit() external pure virtual override returns (bool) {
+        return true;
+    }
+
     /*//////////////////////////////////////////////////////////////
                             PUBLIC VIEW
     //////////////////////////////////////////////////////////////*/

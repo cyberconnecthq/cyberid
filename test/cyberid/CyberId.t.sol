@@ -46,16 +46,16 @@ contract CyberIdTest is CyberIdTestBase {
         assertEq(cid.timestampOf(commitment), startTs);
     }
 
-    function test_Committed_CommitWithin10mins_RevertCommitReplay() public {
+    function test_Committed_CommitWithin1Day_RevertCommitReplay() public {
         cid.commit(commitment);
         vm.warp(startTs + 10 minutes);
         vm.expectRevert("COMMIT_REPLAY");
         cid.commit(commitment);
     }
 
-    function test_Committed_CommitAfter10mins_CommitSuccess() public {
+    function test_Committed_CommitAfter1Day_CommitSuccess() public {
         cid.commit(commitment);
-        vm.warp(startTs + 10 minutes + 1 seconds);
+        vm.warp(startTs + 1 days + 1 seconds);
         cid.commit(commitment);
     }
 
@@ -66,7 +66,7 @@ contract CyberIdTest is CyberIdTestBase {
 
     function test_CommitExpired_Register_RevertNotCommitted() public {
         cid.commit(commitment);
-        vm.warp(startTs + 10 minutes + 1 seconds);
+        vm.warp(startTs + 1 days + 1 seconds);
         vm.expectRevert("NOT_COMMITTED");
         cid.register("alice", aliceAddress, secret, "");
     }

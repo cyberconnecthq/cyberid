@@ -101,7 +101,7 @@ contract CyberId is
     uint256 internal constant _REVEAL_DELAY = 60 seconds;
 
     /// @dev enforced delay in commit() to prevent griefing by replaying the commit
-    uint256 internal constant _COMMIT_REPLAY_DELAY = 10 minutes;
+    uint256 internal constant _COMMIT_REPLAY_DELAY = 1 days;
 
     bytes32 internal constant _OPERATOR_ROLE =
         keccak256(bytes("OPERATOR_ROLE"));
