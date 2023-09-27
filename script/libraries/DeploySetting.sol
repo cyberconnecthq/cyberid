@@ -7,6 +7,8 @@ contract DeploySetting {
         address deployerContract;
         address usdOracle;
         address signer;
+        address protocolOwner;
+        address recipient;
     }
 
     DeployParameters internal deployParams;
@@ -36,6 +38,12 @@ contract DeploySetting {
             );
             deployParams.signer = address(
                 0xaB24749c622AF8FC567CA2b4d3EC53019F83dB8F
+            );
+            deployParams.protocolOwner = address(
+                0x7B23B874cD857C5968434F95674165a36CfD5E4e
+            );
+            deployParams.recipient = address(
+                0x7B23B874cD857C5968434F95674165a36CfD5E4e
             );
         } else {
             revert("PARAMS_NOT_SET");

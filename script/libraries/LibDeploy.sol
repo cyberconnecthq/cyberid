@@ -14,6 +14,7 @@ import { PermissionMw } from "../../src/middlewares/realmid/PermissionMw.sol";
 import { StableFeeMiddleware } from "../../src/middlewares/cyberid/StableFeeMiddleware.sol";
 import { TrustOnlyMiddleware } from "../../src/middlewares/cyberid/TrustOnlyMiddleware.sol";
 import { PermissionMiddleware } from "../../src/middlewares/cyberid/PermissionMiddleware.sol";
+import { PermissionedStableFeeMiddleware } from "../../src/middlewares/cyberid/PermissionedStableFeeMiddleware.sol";
 
 library LibDeploy {
     // create2 deploy all contract with this protocol salt
@@ -94,7 +95,7 @@ library LibDeploy {
                             CyberId.initialize.selector,
                             "CYBER ID",
                             "CYBERID",
-                            msg.sender
+                            params.protocolOwner
                         )
                     )
                 ),
@@ -115,24 +116,37 @@ library LibDeploy {
         );
         _write(vm, "StableFeeMiddleware", stableFeeMw);
 
-        address permissionMw = address(
+        address permissionedStableFeeMw = address(
             dc.deploy(
                 abi.encodePacked(
-                    type(PermissionMiddleware).creationCode,
-                    abi.encode(cyberIdProxy)
+                    type(PermissionedStableFeeMiddleware).creationCode,
+                    abi.encode(params.usdOracle, cyberIdProxy)
                 ),
                 SALT
             )
         );
-        _write(vm, "PermissionMiddleware", permissionMw);
+        _write(vm, "PermissionedStableFeeMiddleware", permissionedStableFeeMw);
 
         CyberId(cyberIdProxy).grantRole(
             keccak256(bytes("OPERATOR_ROLE")),
-            msg.sender
+            params.protocolOwner
         );
         CyberId(cyberIdProxy).setMiddleware(
-            permissionMw,
-            abi.encode(params.signer)
+            permissionedStableFeeMw,
+            abi.encode(
+                params.signer,
+                params.recipient,
+                [
+                    uint256(10000 ether),
+                    2000 ether,
+                    1000 ether,
+                    500 ether,
+                    100 ether,
+                    50 ether,
+                    10 ether,
+                    5 ether
+                ]
+            )
         );
         CyberId(cyberIdProxy).grantRole(
             keccak256(bytes("OPERATOR_ROLE")),
