@@ -5,6 +5,7 @@ pragma solidity 0.8.14;
 import "forge-std/Test.sol";
 import "../../src/core/CyberId.sol";
 import { MockUsdOracle } from "../utils/MockUsdOracle.sol";
+import { MockTokenReceiver } from "../utils/MockTokenReceiver.sol";
 import { CyberIdTestBase } from "../utils/CyberIdTestBase.sol";
 import { DataTypes } from "../../src/libraries/DataTypes.sol";
 import { PermissionedStableFeeMiddleware } from "../../src/middlewares/cyberid/PermissionedStableFeeMiddleware.sol";
@@ -29,12 +30,14 @@ contract CyberIdPermissionedStableFeeMwTest is CyberIdTestBase {
         MockUsdOracle oracle = new MockUsdOracle();
         PermissionedStableFeeMiddleware permissionMw = new PermissionedStableFeeMiddleware(
                 address(oracle),
+                address(new MockTokenReceiver()),
                 address(cid)
             );
         mw = address(permissionMw);
         cid.setMiddleware(
             mw,
             abi.encode(
+                true,
                 aliceAddress,
                 treasuryAddress,
                 [
@@ -356,7 +359,25 @@ contract CyberIdPermissionedStableFeeMwTest is CyberIdTestBase {
         );
     }
 
-    function test_NameNotRegistered_RegisterWithNotFree_Success() public {
+    function test_RebateDisabled_RegisterWithNotFree_Success() public {
+        cid.setMiddleware(
+            mw,
+            abi.encode(
+                false,
+                aliceAddress,
+                treasuryAddress,
+                [
+                    uint256(10000 ether),
+                    2000 ether,
+                    1000 ether,
+                    500 ether,
+                    100 ether,
+                    50 ether,
+                    10 ether,
+                    5 ether
+                ]
+            )
+        );
         string memory name = "test";
         uint256 deadline = startTs;
         bytes32 digest = TestLib712.hashTypedDataV4(
@@ -397,6 +418,54 @@ contract CyberIdPermissionedStableFeeMwTest is CyberIdTestBase {
         );
         assertEq(aliceAddress.balance, startBalance - expectedCost);
         assertEq(treasuryAddress.balance, expectedCost);
+    }
+
+    function test_RebateEnabled_RegisterWithNotFree_Success() public {
+        string memory name = "test";
+        uint256 deadline = startTs;
+        bytes32 digest = TestLib712.hashTypedDataV4(
+            mw,
+            keccak256(
+                abi.encode(
+                    REGISTER_TYPEHASH,
+                    keccak256(bytes(name)),
+                    aliceAddress,
+                    0,
+                    deadline,
+                    false
+                )
+            ),
+            "PermissionedStableFeeMw",
+            "1"
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(aliceSk, digest);
+        uint256 expectedCost = PermissionedStableFeeMiddleware(mw).getPriceWei(
+            name
+        );
+
+        vm.expectEmit(true, true, true, true);
+        emit Transfer(address(0), aliceAddress, cid.getTokenId(name));
+        vm.expectEmit(true, true, true, true);
+        emit Register(
+            aliceAddress,
+            aliceAddress,
+            cid.getTokenId(name),
+            name,
+            expectedCost
+        );
+        cid.register{ value: expectedCost + 1 wei }(
+            name,
+            aliceAddress,
+            bytes32(0),
+            abi.encode(v, r, s, deadline, false)
+        );
+        assertEq(aliceAddress.balance, startBalance - expectedCost);
+        assertEq(
+            MockTokenReceiver(
+                address(PermissionedStableFeeMiddleware(mw).tokenReceiver())
+            ).totalDeposit(),
+            expectedCost
+        );
     }
 
     /* solhint-disable func-name-mixedcase */

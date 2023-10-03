@@ -6,6 +6,7 @@ import { AggregatorV3Interface } from "chainlink/contracts/src/v0.8/interfaces/A
 import { ReentrancyGuard } from "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
 import { ICyberIdMiddleware } from "../../interfaces/ICyberIdMiddleware.sol";
+import { ITokenReceiver } from "../../interfaces/ITokenReceiver.sol";
 
 import { DataTypes } from "../../libraries/DataTypes.sol";
 
@@ -27,11 +28,23 @@ contract PermissionedStableFeeMiddleware is
     AggregatorV3Interface public immutable usdOracle;
 
     /**
+     * @notice TokenReceiver contract address.
+     */
+    ITokenReceiver public immutable tokenReceiver;
+
+    /**
+     * If true, the middleware will charge the fee to token receiver.
+     */
+    bool public rebateEnabled;
+
+    /**
      * @notice The address that receives the fee.
      */
     address public recipient;
 
-    // Rent in base price units by length
+    /**
+     * @notice The price of each letter in USD.
+     */
     uint256 public price1Letter;
     uint256 public price2Letter;
     uint256 public price3Letter;
@@ -63,6 +76,7 @@ contract PermissionedStableFeeMiddleware is
     event SignerChanged(address indexed signer);
 
     event StableFeeChanged(
+        bool rebateEnabled,
         address indexed recipient,
         uint256 price1Letter,
         uint256 price2Letter,
@@ -80,9 +94,11 @@ contract PermissionedStableFeeMiddleware is
 
     constructor(
         address _oracleAddress,
+        address _tokenReceiver,
         address cyberId
     ) LowerCaseCyberIdMiddleware(cyberId) {
         usdOracle = AggregatorV3Interface(_oracleAddress);
+        tokenReceiver = ITokenReceiver(_tokenReceiver);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -91,10 +107,15 @@ contract PermissionedStableFeeMiddleware is
 
     /// @inheritdoc ICyberIdMiddleware
     function setMwData(bytes calldata data) external override onlyNameRegistry {
-        (address newSigner, address _recipient, uint256[8] memory prices) = abi
-            .decode(data, (address, address, uint256[8]));
+        (
+            bool _rebateEnabled,
+            address newSigner,
+            address _recipient,
+            uint256[8] memory prices
+        ) = abi.decode(data, (bool, address, address, uint256[8]));
         require(newSigner != address(0), "INVALID_SIGNER");
         signer = newSigner;
+        rebateEnabled = _rebateEnabled;
         emit SignerChanged(signer);
         recipient = _recipient;
         price1Letter = prices[0];
@@ -106,6 +127,7 @@ contract PermissionedStableFeeMiddleware is
         price7To11Letter = prices[6];
         price12AndMoreLetter = prices[7];
         emit StableFeeChanged(
+            _rebateEnabled,
             _recipient,
             prices[0],
             prices[1],
@@ -153,7 +175,7 @@ contract PermissionedStableFeeMiddleware is
             return 0;
         } else {
             uint256 cost = getPriceWei(params.cid);
-            _chargeAndRefundOverPayment(cost, params.msgSender);
+            _chargeAndRefundOverPayment(cost, params.to, params.msgSender);
             return cost;
         }
     }
@@ -222,6 +244,7 @@ contract PermissionedStableFeeMiddleware is
 
     function _chargeAndRefundOverPayment(
         uint256 cost,
+        address depositTo,
         address refundTo
     ) internal {
         require(msg.value >= cost, "INSUFFICIENT_FUNDS");
@@ -237,8 +260,12 @@ contract PermissionedStableFeeMiddleware is
             (bool refundSuccess, ) = refundTo.call{ value: overpayment }("");
             require(refundSuccess, "REFUND_FAILED");
         }
-        (bool chargeSuccess, ) = recipient.call{ value: cost }("");
-        require(chargeSuccess, "CHARGE_FAILED");
+        if (rebateEnabled) {
+            tokenReceiver.depositTo{ value: cost }(depositTo);
+        } else {
+            (bool chargeSuccess, ) = recipient.call{ value: cost }("");
+            require(chargeSuccess, "CHARGE_FAILED");
+        }
     }
 
     /*//////////////////////////////////////////////////////////////

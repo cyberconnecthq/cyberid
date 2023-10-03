@@ -120,7 +120,11 @@ library LibDeploy {
             dc.deploy(
                 abi.encodePacked(
                     type(PermissionedStableFeeMiddleware).creationCode,
-                    abi.encode(params.usdOracle, cyberIdProxy)
+                    abi.encode(
+                        params.usdOracle,
+                        params.tokenReceiver,
+                        cyberIdProxy
+                    )
                 ),
                 SALT
             )
@@ -134,6 +138,7 @@ library LibDeploy {
         CyberId(cyberIdProxy).setMiddleware(
             permissionedStableFeeMw,
             abi.encode(
+                true,
                 params.signer,
                 params.recipient,
                 [

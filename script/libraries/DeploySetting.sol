@@ -9,6 +9,7 @@ contract DeploySetting {
         address signer;
         address protocolOwner;
         address recipient;
+        address tokenReceiver;
     }
 
     DeployParameters internal deployParams;
@@ -44,6 +45,9 @@ contract DeploySetting {
             );
             deployParams.recipient = address(
                 0x7B23B874cD857C5968434F95674165a36CfD5E4e
+            );
+            deployParams.tokenReceiver = address(
+                0x52B90f8e69aC72fE0F46726eADDA13835Cbb01FA
             );
         } else {
             revert("PARAMS_NOT_SET");
