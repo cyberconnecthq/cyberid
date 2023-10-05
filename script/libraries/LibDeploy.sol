@@ -29,6 +29,7 @@ library LibDeploy {
         else if (chainId == 84531) chainName = "base_goerli";
         else if (chainId == 80001) chainName = "mumbai";
         else if (chainId == 420) chainName = "op_goerli";
+        else if (chainId == 10) chainName = "op";
         else chainName = "unknown";
         return
             string(
@@ -78,6 +79,39 @@ library LibDeploy {
         _writeHelper(vm, name, addr);
     }
 
+    function setCyberIDInitState(
+        DeploySetting.DeployParameters memory params,
+        address cyberIdProxy,
+        address permissionedStableFeeMw
+    ) internal {
+        CyberId(cyberIdProxy).grantRole(
+            keccak256(bytes("OPERATOR_ROLE")),
+            params.protocolOwner
+        );
+        CyberId(cyberIdProxy).setMiddleware(
+            permissionedStableFeeMw,
+            abi.encode(
+                true,
+                params.signer,
+                params.recipient,
+                [
+                    uint256(10000 ether),
+                    2000 ether,
+                    1000 ether,
+                    500 ether,
+                    100 ether,
+                    50 ether,
+                    10 ether,
+                    5 ether
+                ]
+            )
+        );
+        CyberId(cyberIdProxy).grantRole(
+            keccak256(bytes("OPERATOR_ROLE")),
+            params.signer
+        );
+    }
+
     function deployCyberId(
         Vm vm,
         DeploySetting.DeployParameters memory params
@@ -93,7 +127,7 @@ library LibDeploy {
                         cyberIdImpl,
                         abi.encodeWithSelector(
                             CyberId.initialize.selector,
-                            "CYBER ID",
+                            "CyberID",
                             "CYBERID",
                             params.protocolOwner
                         )
@@ -130,33 +164,6 @@ library LibDeploy {
             )
         );
         _write(vm, "PermissionedStableFeeMiddleware", permissionedStableFeeMw);
-
-        CyberId(cyberIdProxy).grantRole(
-            keccak256(bytes("OPERATOR_ROLE")),
-            params.protocolOwner
-        );
-        CyberId(cyberIdProxy).setMiddleware(
-            permissionedStableFeeMw,
-            abi.encode(
-                true,
-                params.signer,
-                params.recipient,
-                [
-                    uint256(10000 ether),
-                    2000 ether,
-                    1000 ether,
-                    500 ether,
-                    100 ether,
-                    50 ether,
-                    10 ether,
-                    5 ether
-                ]
-            )
-        );
-        CyberId(cyberIdProxy).grantRole(
-            keccak256(bytes("OPERATOR_ROLE")),
-            params.signer
-        );
     }
 
     function deployRealmId(
