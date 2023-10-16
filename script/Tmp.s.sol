@@ -7,6 +7,7 @@ import { PermissionMw } from "../src/middlewares/realmid/PermissionMw.sol";
 import { Constants } from "../src/libraries/Constants.sol";
 import { TestLib712 } from "../test/utils/TestLib712.sol";
 import { CyberId } from "../src/core/CyberId.sol";
+import { PermissionedStableFeeMiddleware } from "../src/middlewares/cyberid/PermissionedStableFeeMiddleware.sol";
 
 contract TempScript is Script {
     function run() external {
