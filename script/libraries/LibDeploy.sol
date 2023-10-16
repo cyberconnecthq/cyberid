@@ -15,6 +15,9 @@ import { StableFeeMiddleware } from "../../src/middlewares/cyberid/StableFeeMidd
 import { TrustOnlyMiddleware } from "../../src/middlewares/cyberid/TrustOnlyMiddleware.sol";
 import { PermissionMiddleware } from "../../src/middlewares/cyberid/PermissionMiddleware.sol";
 import { PermissionedStableFeeMiddleware } from "../../src/middlewares/cyberid/PermissionedStableFeeMiddleware.sol";
+import { CyberIdRegistry } from "../../src/core/CyberIdRegistry.sol";
+import { CyberIdPublicResolver } from "../../src/core/CyberIdPublicResolver.sol";
+import { CyberIdReverseRegistrar } from "../../src/core/CyberIdReverseRegistrar.sol";
 
 library LibDeploy {
     // create2 deploy all contract with this protocol salt
@@ -82,7 +85,10 @@ library LibDeploy {
     function setCyberIDInitState(
         DeploySetting.DeployParameters memory params,
         address cyberIdProxy,
-        address permissionedStableFeeMw
+        address permissionedStableFeeMw,
+        address cyberIdRegistry,
+        address cyberIdPublicResolver,
+        address cyberIdReverseRegistrar
     ) internal {
         CyberId(cyberIdProxy).grantRole(
             keccak256(bytes("OPERATOR_ROLE")),
@@ -110,6 +116,43 @@ library LibDeploy {
             keccak256(bytes("OPERATOR_ROLE")),
             params.signer
         );
+
+        CyberIdReverseRegistrar(cyberIdReverseRegistrar).setDefaultResolver(
+            address(cyberIdPublicResolver)
+        );
+        CyberIdRegistry(cyberIdRegistry).setSubnodeOwner(
+            bytes32(0),
+            keccak256(bytes("cyber")),
+            cyberIdProxy
+        );
+        bytes32 reverseNode = CyberIdRegistry(cyberIdRegistry).setSubnodeOwner(
+            bytes32(0),
+            keccak256(bytes("reverse")),
+            params.protocolOwner
+        );
+        bytes32 addrReverseNode = CyberIdRegistry(cyberIdRegistry)
+            .setSubnodeOwner(
+                reverseNode,
+                keccak256(bytes("addr")),
+                cyberIdReverseRegistrar
+            );
+        require(
+            addrReverseNode ==
+                bytes32(
+                    0x91d1777781884d03a6757a803996e38de2a42967fb37eeaca72729271025a9e2
+                ),
+            "WRONG_ADDR_REVERSE_NODE"
+        );
+        CyberIdPublicResolver(cyberIdPublicResolver).setTrustedCyberIdRegistrar(
+            cyberIdProxy
+        );
+        CyberIdPublicResolver(cyberIdPublicResolver).setTrustedReverseRegistrar(
+            cyberIdReverseRegistrar
+        );
+        CyberIdReverseRegistrar(cyberIdReverseRegistrar).setController(
+            cyberIdProxy,
+            true
+        );
     }
 
     function deployCyberId(
@@ -117,24 +160,53 @@ library LibDeploy {
         DeploySetting.DeployParameters memory params
     ) internal {
         Create2Deployer dc = Create2Deployer(params.deployerContract);
+
+        address cyberIdRegistry = dc.deploy(
+            abi.encodePacked(
+                type(CyberIdRegistry).creationCode,
+                abi.encode(params.protocolOwner)
+            ),
+            SALT
+        );
+        _write(vm, "CyberIdRegistry", cyberIdRegistry);
+
+        address cyberIdPublicResolver = dc.deploy(
+            abi.encodePacked(
+                type(CyberIdPublicResolver).creationCode,
+                abi.encode(cyberIdRegistry, params.protocolOwner)
+            ),
+            SALT
+        );
+        _write(vm, "CyberIdPublicResolver", cyberIdPublicResolver);
+
+        address cyberIdReverseRegistrar = dc.deploy(
+            abi.encodePacked(
+                type(CyberIdReverseRegistrar).creationCode,
+                abi.encode(cyberIdRegistry, params.protocolOwner)
+            ),
+            SALT
+        );
+        _write(vm, "CyberIdReverseRegistrar", cyberIdReverseRegistrar);
+
         address cyberIdImpl = address(new CyberId());
         _write(vm, "CyberId(Impl)", cyberIdImpl);
-        address cyberIdProxy = address(
-            dc.deploy(
-                abi.encodePacked(
-                    type(ERC1967Proxy).creationCode,
-                    abi.encode(
-                        cyberIdImpl,
-                        abi.encodeWithSelector(
-                            CyberId.initialize.selector,
-                            "CyberID",
-                            "CYBERID",
-                            params.protocolOwner
-                        )
+        address cyberIdProxy = dc.deploy(
+            abi.encodePacked(
+                type(ERC1967Proxy).creationCode,
+                abi.encode(
+                    cyberIdImpl,
+                    abi.encodeWithSelector(
+                        CyberId.initialize.selector,
+                        cyberIdRegistry,
+                        cyberIdPublicResolver,
+                        cyberIdReverseRegistrar,
+                        "CyberID",
+                        "CYBERID",
+                        params.protocolOwner
                     )
-                ),
-                SALT
-            )
+                )
+            ),
+            SALT
         );
 
         _write(vm, "CyberId(Proxy)", cyberIdProxy);
