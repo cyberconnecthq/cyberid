@@ -113,6 +113,23 @@ contract CyberIdTest is CyberIdTestBase {
         cid.register("alice", aliceAddress, secret, "");
         assertEq(aliceAddress.balance, startBalance);
         assertEq(address(cid).balance, 0);
+
+        bytes32 node = bytes32(cid.getTokenId("alice"));
+        assertEq(registry.owner(node), aliceAddress);
+        assertEq(registry.resolver(node), address(resolver));
+        assertEq(resolver.addr(node), aliceAddress);
+
+        bytes32 reverseNode = keccak256(
+            abi.encodePacked(
+                bytes32(
+                    0x91d1777781884d03a6757a803996e38de2a42967fb37eeaca72729271025a9e2
+                ),
+                keccak256(bytes("1cc0c65ca5dd6b767338946f2c44c02040744ef5"))
+            )
+        );
+        assertEq(registry.owner(reverseNode), aliceAddress);
+        assertEq(registry.resolver(reverseNode), address(resolver));
+        assertEq(resolver.name(reverseNode), "alice.cyber");
     }
 
     function test_Registered_Burn_Success() public {
@@ -121,8 +138,25 @@ contract CyberIdTest is CyberIdTestBase {
         cid.register("alice", aliceAddress, secret, "");
         assertEq(cid.totalSupply(), 1);
 
-        cid.burn(cid.getTokenId("alice"));
+        cid.burn("alice");
         assertEq(cid.totalSupply(), 0);
+
+        bytes32 node = bytes32(cid.getTokenId("alice"));
+        assertEq(registry.owner(node), address(0));
+        assertEq(registry.resolver(node), address(0));
+        assertEq(resolver.addr(node), address(0));
+
+        bytes32 reverseNode = keccak256(
+            abi.encodePacked(
+                bytes32(
+                    0x91d1777781884d03a6757a803996e38de2a42967fb37eeaca72729271025a9e2
+                ),
+                keccak256(bytes("1cc0c65ca5dd6b767338946f2c44c02040744ef5"))
+            )
+        );
+        assertEq(registry.owner(reverseNode), aliceAddress);
+        assertEq(registry.resolver(reverseNode), address(resolver));
+        assertEq(resolver.name(reverseNode), "alice.cyber");
     }
 
     function test_Registered_BurnOthers_RevertUnauthorized() public {
@@ -132,16 +166,23 @@ contract CyberIdTest is CyberIdTestBase {
         assertEq(cid.totalSupply(), 1);
 
         vm.startPrank(bobAddress);
-        uint256 tokenId = cid.getTokenId("alice");
         vm.expectRevert("UNAUTHORIZED");
-        cid.burn(tokenId);
+        cid.burn("alice");
     }
 
     function test_WithoutRole_BatchRegister_RevertUnauthorized() public {
         DataTypes.BatchRegisterCyberIdParams[]
             memory params = new DataTypes.BatchRegisterCyberIdParams[](2);
-        params[0] = DataTypes.BatchRegisterCyberIdParams("alice", aliceAddress);
-        params[1] = DataTypes.BatchRegisterCyberIdParams("bob", bobAddress);
+        params[0] = DataTypes.BatchRegisterCyberIdParams(
+            "alice",
+            aliceAddress,
+            address(0)
+        );
+        params[1] = DataTypes.BatchRegisterCyberIdParams(
+            "bob",
+            bobAddress,
+            address(0)
+        );
         vm.startPrank(bobAddress);
         vm.expectRevert(
             "AccessControl: account 0x440d9ab59a4ed2f575666c23ef8c17c53a96e3e0 is missing role 0x97667070c54ef182b0f5858b034beac1b6f3089aa2d3188bb1e8929f4fa9b929"
@@ -149,11 +190,19 @@ contract CyberIdTest is CyberIdTestBase {
         cid.batchRegister(params);
     }
 
-    function test_WithRole_BatchRegister_RevertUnauthorized() public {
+    function test_WithRole_BatchRegister_Success() public {
         DataTypes.BatchRegisterCyberIdParams[]
             memory params = new DataTypes.BatchRegisterCyberIdParams[](2);
-        params[0] = DataTypes.BatchRegisterCyberIdParams("alice", aliceAddress);
-        params[1] = DataTypes.BatchRegisterCyberIdParams("bob", bobAddress);
+        params[0] = DataTypes.BatchRegisterCyberIdParams(
+            "alice",
+            aliceAddress,
+            address(0)
+        );
+        params[1] = DataTypes.BatchRegisterCyberIdParams(
+            "bob",
+            bobAddress,
+            address(0)
+        );
         cid.batchRegister(params);
         assertEq(cid.ownerOf(cid.getTokenId("alice")), aliceAddress);
         assertEq(cid.ownerOf(cid.getTokenId("bob")), bobAddress);
@@ -285,7 +334,7 @@ contract CyberIdTest is CyberIdTestBase {
         uint256 tokenId = cid.getTokenId("alice");
         assertEq(
             cid.tokenURI(tokenId),
-            "0x9c0257114eb9399a2985f8e75dad7600c5d89fe3824ffa99ec1c3eb8bf3b0501"
+            "0xf274ad8930852a6a62f907d26d6aa10156d2bb37471f229eda0f557c74069d83"
         );
     }
 
@@ -301,80 +350,10 @@ contract CyberIdTest is CyberIdTestBase {
             string(
                 abi.encodePacked(
                     baseUri,
-                    "0x9c0257114eb9399a2985f8e75dad7600c5d89fe3824ffa99ec1c3eb8bf3b0501"
+                    "0xf274ad8930852a6a62f907d26d6aa10156d2bb37471f229eda0f557c74069d83"
                 )
             )
         );
-    }
-
-    function test_NameRegistered_SetMetadata_ReadSuccess() public {
-        cid.commit(commitment);
-        vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, "");
-
-        uint256 tokenId = cid.getTokenId("alice");
-        string memory avatarKey = "avatar";
-        string
-            memory avatarValue = "ipfs://Qmb5YRL6hjutLUF2dw5V5WGjQCip4e1WpRo8w3iFss4cWB";
-        DataTypes.MetadataPair[]
-            memory metadatas = new DataTypes.MetadataPair[](1);
-        metadatas[0] = DataTypes.MetadataPair(avatarKey, avatarValue);
-        cid.batchSetMetadatas(tokenId, metadatas);
-        assertEq(avatarValue, cid.getMetadata(tokenId, avatarKey));
-        metadatas[0] = DataTypes.MetadataPair(avatarKey, unicode"中文");
-        cid.batchSetMetadatas(tokenId, metadatas);
-        assertEq(unicode"中文", cid.getMetadata(tokenId, avatarKey));
-    }
-
-    function test_NameNotRegistered_SetMetadata_RevertInvalidToken() public {
-        uint256 tokenId = cid.getTokenId("alice");
-        string memory avatarKey = "avatar";
-        string
-            memory avatarValue = "ipfs://Qmb5YRL6hjutLUF2dw5V5WGjQCip4e1WpRo8w3iFss4cWB";
-        DataTypes.MetadataPair[]
-            memory metadatas = new DataTypes.MetadataPair[](1);
-        metadatas[0] = DataTypes.MetadataPair(avatarKey, avatarValue);
-        vm.expectRevert("ERC721: invalid token ID");
-        cid.batchSetMetadatas(tokenId, metadatas);
-    }
-
-    function test_MetadataSet_ClearMetadata_ReadSuccess() public {
-        cid.commit(commitment);
-        vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, "");
-
-        uint256 tokenId = cid.getTokenId("alice");
-        DataTypes.MetadataPair[]
-            memory metadatas = new DataTypes.MetadataPair[](2);
-        metadatas[0] = DataTypes.MetadataPair("1", "1");
-        metadatas[1] = DataTypes.MetadataPair("2", "2");
-        cid.batchSetMetadatas(tokenId, metadatas);
-        assertEq(cid.getMetadata(tokenId, "1"), "1");
-        assertEq(cid.getMetadata(tokenId, "2"), "2");
-        cid.clearMetadatas(tokenId);
-        assertEq(cid.getMetadata(tokenId, "1"), "");
-        assertEq(cid.getMetadata(tokenId, "2"), "");
-    }
-
-    function test_MetadataSet_ClearMetadataByOthers_RevertUnAuth() public {
-        cid.commit(commitment);
-        vm.warp(startTs + 61 seconds);
-        cid.register{ value: 1 ether }("alice", aliceAddress, secret, "");
-
-        uint256 tokenId = cid.getTokenId("alice");
-        DataTypes.MetadataPair[]
-            memory metadatas = new DataTypes.MetadataPair[](2);
-        metadatas[0] = DataTypes.MetadataPair("1", "1");
-        metadatas[1] = DataTypes.MetadataPair("2", "2");
-        cid.batchSetMetadatas(tokenId, metadatas);
-        assertEq(cid.getMetadata(tokenId, "1"), "1");
-        assertEq(cid.getMetadata(tokenId, "2"), "2");
-        vm.stopPrank();
-        vm.startPrank(bobAddress);
-        vm.expectRevert("METADATA_UNAUTHORISED");
-        cid.clearMetadatas(tokenId);
-        assertEq(cid.getMetadata(tokenId, "1"), "1");
-        assertEq(cid.getMetadata(tokenId, "2"), "2");
     }
 
     function test_MiddlewareNotSet_SetMiddleware_Success() public {

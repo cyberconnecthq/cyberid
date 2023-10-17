@@ -7,27 +7,42 @@ import { ERC721Upgradeable } from "openzeppelin-upgradeable/contracts/token/ERC7
 import { UUPSUpgradeable } from "openzeppelin-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { Initializable } from "openzeppelin-upgradeable/contracts/proxy/utils/Initializable.sol";
 import { PausableUpgradeable } from "openzeppelin-upgradeable/contracts/security/PausableUpgradeable.sol";
+import { ENS } from "@ens/registry/ENS.sol";
+import { Resolver } from "@ens/resolvers/Resolver.sol";
+import { ReverseRegistrar } from "@ens/registry/ReverseRegistrar.sol";
 
 import { ICyberIdMiddleware } from "../interfaces/ICyberIdMiddleware.sol";
 
 import { LibString } from "../libraries/LibString.sol";
 import { DataTypes } from "../libraries/DataTypes.sol";
 
-import { MetadataResolver } from "../base/MetadataResolver.sol";
-
 contract CyberId is
     Initializable,
     ERC721Upgradeable,
     AccessControlEnumerableUpgradeable,
     UUPSUpgradeable,
-    PausableUpgradeable,
-    MetadataResolver
+    PausableUpgradeable
 {
     using LibString for *;
 
     /*//////////////////////////////////////////////////////////////
                             STORAGE
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice The address of the CyberId registry.
+     */
+    address public cyberIdRegistry;
+
+    /**
+     * @notice The address of the reverse registrar.
+     */
+    address public reverseRegistrar;
+
+    /**
+     * @notice The address of the default resolver.
+     */
+    address public defaultResolver;
 
     /**
      * @notice Middleware contract that processes before register, renew and bid.
@@ -106,6 +121,9 @@ contract CyberId is
     bytes32 internal constant _OPERATOR_ROLE =
         keccak256(bytes("OPERATOR_ROLE"));
 
+    bytes32 private constant _CYBER_NODE =
+        0x085ce9dbd6bf88d21613576ea20ed9c2c0f37a9f4d3608bc0d69f735e4d2d146;
+
     /*//////////////////////////////////////////////////////////////
                         CONSTRUCTORS AND INITIALIZERS
     //////////////////////////////////////////////////////////////*/
@@ -120,15 +138,18 @@ contract CyberId is
     /**
      * @notice Initialize default storage values and inherited contracts. This should be called
      *         once after the contract is deployed via the ERC1967 proxy.
-     *
-     * @param _tokenName   The ERC-721 name of the token
-     * @param _tokenSymbol The ERC-721 symbol of the token
      */
     function initialize(
+        address _cyberIdRegistry,
+        address _defaultResolver,
+        address _reverseRegistrar,
         string calldata _tokenName,
         string calldata _tokenSymbol,
         address _owner
     ) external initializer {
+        cyberIdRegistry = _cyberIdRegistry;
+        reverseRegistrar = _reverseRegistrar;
+        defaultResolver = _defaultResolver;
         /* Initialize inherited contracts */
         __ERC721_init(_tokenName, _tokenSymbol);
         __UUPSUpgradeable_init();
@@ -238,21 +259,44 @@ contract CyberId is
             middlewareData
         );
 
-        _register(msg.sender, cid, to, cost);
+        _register(msg.sender, cid, to, defaultResolver, cost);
     }
 
     /**
-     * @notice Burns a token.
+     * @notice Burns a cyberid.
      *
-     * @param tokenId The token id to burn.
+     * @param cid The name to burn.
      */
-    function burn(uint256 tokenId) external {
+    function burn(string calldata cid) external {
+        uint256 tokenId = getTokenId(cid);
         require(_isApprovedOrOwner(msg.sender, tokenId), "UNAUTHORIZED");
-        _clearMetadatas(tokenId);
-        _clearGatedMetadatas(tokenId);
         super._burn(tokenId);
         --_supplyCount;
+        address resolver = ENS(cyberIdRegistry).resolver(bytes32(tokenId));
+        if (resolver == defaultResolver) {
+            _setRecord(resolver, bytes32(tokenId), address(0));
+        }
+        ENS(cyberIdRegistry).setSubnodeRecord(
+            _CYBER_NODE,
+            keccak256(bytes(cid)),
+            address(0),
+            address(0),
+            0
+        );
         emit Burn(msg.sender, tokenId);
+    }
+
+    /**
+     * @dev Reclaim ownership of a name in CyberIdRegistry, if you own it in the registrar.
+     */
+    function reclaim(string calldata cid, address owner) external {
+        uint256 tokenId = getTokenId(cid);
+        require(_isApprovedOrOwner(msg.sender, tokenId));
+        ENS(cyberIdRegistry).setSubnodeOwner(
+            _CYBER_NODE,
+            keccak256(bytes(cid)),
+            owner
+        );
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -329,8 +373,11 @@ contract CyberId is
      *
      * @return uint256 The token id.
      */
-    function getTokenId(string calldata cid) external pure returns (uint256) {
-        return uint256(keccak256(bytes(cid)));
+    function getTokenId(string calldata cid) public pure returns (uint256) {
+        bytes32 nodehash = keccak256(
+            abi.encodePacked(_CYBER_NODE, keccak256(bytes(cid)))
+        );
+        return uint256(nodehash);
     }
 
     /**
@@ -373,7 +420,13 @@ contract CyberId is
         DataTypes.BatchRegisterCyberIdParams[] calldata params
     ) external onlyRole(_OPERATOR_ROLE) {
         for (uint256 i = 0; i < params.length; i++) {
-            _register(msg.sender, params[i].cid, params[i].to, 0);
+            _register(
+                msg.sender,
+                params[i].cid,
+                params[i].to,
+                params[i].resolver,
+                0
+            );
         }
     }
 
@@ -407,25 +460,50 @@ contract CyberId is
         address from,
         string calldata cid,
         address to,
+        address resolver,
         uint256 cost
     ) internal {
         require(available(cid), "NAME_NOT_AVAILABLE");
+        if (resolver == address(0)) {
+            resolver = defaultResolver;
+        }
         bytes32 label = keccak256(bytes(cid));
-        uint256 tokenId = uint256(label);
+        ENS(cyberIdRegistry).setSubnodeRecord(
+            _CYBER_NODE,
+            label,
+            to,
+            resolver,
+            0
+        );
+        bytes32 nodeHash = keccak256(abi.encodePacked(_CYBER_NODE, label));
+        uint256 tokenId = uint256(nodeHash);
+        _setRecord(resolver, nodeHash, to);
+        _setReverseRecord(cid, resolver, to);
         super._safeMint(to, tokenId);
         _supplyCount++;
         emit Register(from, to, tokenId, cid, cost);
     }
 
-    function _isMetadataAuthorised(
-        uint256 tokenId
-    ) internal view override returns (bool) {
-        return super._isApprovedOrOwner(msg.sender, tokenId);
+    function _setRecord(
+        address resolverAddress,
+        bytes32 nodeHash,
+        address to
+    ) internal {
+        if (resolverAddress == defaultResolver) {
+            Resolver(resolverAddress).setAddr(nodeHash, to);
+        }
     }
 
-    function _isGatedMetadataAuthorised(
-        uint256
-    ) internal view override returns (bool) {
-        return hasRole(_OPERATOR_ROLE, msg.sender);
+    function _setReverseRecord(
+        string memory name,
+        address resolver,
+        address owner
+    ) internal {
+        ReverseRegistrar(reverseRegistrar).setNameForAddr(
+            owner,
+            owner,
+            resolver,
+            string.concat(name, ".cyber")
+        );
     }
 }

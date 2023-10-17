@@ -4,3 +4,6 @@ openzeppelin-contracts/=lib/openzeppelin-contracts/
 solmate/=lib/solmate/
 chainlink/=lib/chainlink/
 openzeppelin-upgradeable/=lib/openzeppelin-contracts-upgradeable/
+@ens/=lib/ens-contracts/contracts
+@openzeppelin/=lib/openzeppelin-contracts/
+@ensdomains/=lib

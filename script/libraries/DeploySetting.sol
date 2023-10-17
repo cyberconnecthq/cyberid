@@ -48,7 +48,7 @@ contract DeploySetting {
                 0x7B23B874cD857C5968434F95674165a36CfD5E4e
             );
             deployParams.tokenReceiver = address(
-                0x52B90f8e69aC72fE0F46726eADDA13835Cbb01FA
+                0xcd97405Fb58e94954E825E46dB192b916A45d412
             );
         } else if (block.chainid == OP) {
             deployParams.deployerContract = address(

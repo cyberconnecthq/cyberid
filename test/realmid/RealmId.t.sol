@@ -348,6 +348,19 @@ contract RealmIdTest is RealmIdTestBase {
             ethNode,
             0x93cdeb708b7545dc668eb9280176169d1c33cfd8ed6f04690a0bcc88a93fc4ae
         );
+
+        bytes32 cyberNode = mid.allowNode(
+            "cyber",
+            bytes32(0),
+            true,
+            "",
+            address(0),
+            new bytes(0)
+        );
+        assertEq(
+            cyberNode,
+            0x085ce9dbd6bf88d21613576ea20ed9c2c0f37a9f4d3608bc0d69f735e4d2d146
+        );
     }
 
     /* solhint-disable func-name-mixedcase */
