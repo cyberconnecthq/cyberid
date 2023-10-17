@@ -375,6 +375,14 @@ contract CyberId is
                     0
                 );
                 _setRecord(resolver, bytes32(tokenId), to);
+            } else {
+                ENS(cyberIdRegistry).setSubnodeRecord(
+                    _CYBER_NODE,
+                    keccak256(bytes(labels[tokenId])),
+                    to,
+                    address(0),
+                    0
+                );
             }
         }
     }

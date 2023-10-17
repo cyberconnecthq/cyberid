@@ -150,6 +150,23 @@ contract CyberIdTest is CyberIdTestBase {
         assertEq(resolver.addr(node), bobAddress);
     }
 
+    function test_ResolverUpdated_Transfer_ZeroResolver() public {
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register("alice", aliceAddress, secret, "");
+        assertEq(cid.totalSupply(), 1);
+
+        bytes32 node = bytes32(cid.getTokenId("alice"));
+        registry.setResolver(node, address(0x12345));
+
+        cid.unpause();
+        cid.transferFrom(aliceAddress, bobAddress, uint256(node));
+
+        assertEq(registry.owner(node), bobAddress);
+        assertEq(registry.resolver(node), address(0));
+        assertEq(resolver.addr(node), aliceAddress);
+    }
+
     function test_Registered_BurnOthers_RevertUnauthorized() public {
         cid.commit(commitment);
         vm.warp(startTs + 61 seconds);
