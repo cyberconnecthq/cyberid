@@ -64,6 +64,11 @@ contract CyberId is
      */
     uint256 internal _supplyCount;
 
+    /**
+     * @notice The mapping of token id to cid.
+     */
+    mapping(uint256 => string) public labels;
+
     /*//////////////////////////////////////////////////////////////
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
@@ -259,7 +264,7 @@ contract CyberId is
             middlewareData
         );
 
-        _register(msg.sender, cid, to, defaultResolver, cost);
+        _register(msg.sender, cid, to, defaultResolver, false, cost);
     }
 
     /**
@@ -272,17 +277,6 @@ contract CyberId is
         require(_isApprovedOrOwner(msg.sender, tokenId), "UNAUTHORIZED");
         super._burn(tokenId);
         --_supplyCount;
-        address resolver = ENS(cyberIdRegistry).resolver(bytes32(tokenId));
-        if (resolver == defaultResolver) {
-            _setRecord(resolver, bytes32(tokenId), address(0));
-        }
-        ENS(cyberIdRegistry).setSubnodeRecord(
-            _CYBER_NODE,
-            keccak256(bytes(cid)),
-            address(0),
-            address(0),
-            0
-        );
         emit Burn(msg.sender, tokenId);
     }
 
@@ -364,6 +358,27 @@ contract CyberId is
         return string(abi.encodePacked(baseTokenURI, tokenId.toHexString()));
     }
 
+    function _afterTokenTransfer(
+        address from,
+        address to,
+        uint256 tokenId,
+        uint256
+    ) internal override {
+        if (from != address(0)) {
+            address resolver = ENS(cyberIdRegistry).resolver(bytes32(tokenId));
+            if (resolver == defaultResolver) {
+                ENS(cyberIdRegistry).setSubnodeRecord(
+                    _CYBER_NODE,
+                    keccak256(bytes(labels[tokenId])),
+                    to,
+                    defaultResolver,
+                    0
+                );
+                _setRecord(resolver, bytes32(tokenId), to);
+            }
+        }
+    }
+
     /*//////////////////////////////////////////////////////////////
                             PUBLIC VIEW
     //////////////////////////////////////////////////////////////*/
@@ -425,6 +440,7 @@ contract CyberId is
                 params[i].cid,
                 params[i].to,
                 params[i].resolver,
+                true,
                 0
             );
         }
@@ -461,6 +477,7 @@ contract CyberId is
         string calldata cid,
         address to,
         address resolver,
+        bool setReverse,
         uint256 cost
     ) internal {
         require(available(cid), "NAME_NOT_AVAILABLE");
@@ -477,8 +494,11 @@ contract CyberId is
         );
         bytes32 nodeHash = keccak256(abi.encodePacked(_CYBER_NODE, label));
         uint256 tokenId = uint256(nodeHash);
+        labels[tokenId] = cid;
         _setRecord(resolver, nodeHash, to);
-        _setReverseRecord(cid, resolver, to);
+        if (setReverse) {
+            _setReverseRecord(cid, resolver, to);
+        }
         super._safeMint(to, tokenId);
         _supplyCount++;
         emit Register(from, to, tokenId, cid, cost);

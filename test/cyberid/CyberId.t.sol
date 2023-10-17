@@ -118,18 +118,6 @@ contract CyberIdTest is CyberIdTestBase {
         assertEq(registry.owner(node), aliceAddress);
         assertEq(registry.resolver(node), address(resolver));
         assertEq(resolver.addr(node), aliceAddress);
-
-        bytes32 reverseNode = keccak256(
-            abi.encodePacked(
-                bytes32(
-                    0x91d1777781884d03a6757a803996e38de2a42967fb37eeaca72729271025a9e2
-                ),
-                keccak256(bytes("1cc0c65ca5dd6b767338946f2c44c02040744ef5"))
-            )
-        );
-        assertEq(registry.owner(reverseNode), aliceAddress);
-        assertEq(registry.resolver(reverseNode), address(resolver));
-        assertEq(resolver.name(reverseNode), "alice.cyber");
     }
 
     function test_Registered_Burn_Success() public {
@@ -143,20 +131,23 @@ contract CyberIdTest is CyberIdTestBase {
 
         bytes32 node = bytes32(cid.getTokenId("alice"));
         assertEq(registry.owner(node), address(0));
-        assertEq(registry.resolver(node), address(0));
+        assertEq(registry.resolver(node), address(resolver));
         assertEq(resolver.addr(node), address(0));
+    }
 
-        bytes32 reverseNode = keccak256(
-            abi.encodePacked(
-                bytes32(
-                    0x91d1777781884d03a6757a803996e38de2a42967fb37eeaca72729271025a9e2
-                ),
-                keccak256(bytes("1cc0c65ca5dd6b767338946f2c44c02040744ef5"))
-            )
-        );
-        assertEq(registry.owner(reverseNode), aliceAddress);
-        assertEq(registry.resolver(reverseNode), address(resolver));
-        assertEq(resolver.name(reverseNode), "alice.cyber");
+    function test_Registered_Transfer_RecordUpdated() public {
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register("alice", aliceAddress, secret, "");
+        assertEq(cid.totalSupply(), 1);
+
+        cid.unpause();
+        cid.transferFrom(aliceAddress, bobAddress, cid.getTokenId("alice"));
+
+        bytes32 node = bytes32(cid.getTokenId("alice"));
+        assertEq(registry.owner(node), bobAddress);
+        assertEq(registry.resolver(node), address(resolver));
+        assertEq(resolver.addr(node), bobAddress);
     }
 
     function test_Registered_BurnOthers_RevertUnauthorized() public {
@@ -206,6 +197,18 @@ contract CyberIdTest is CyberIdTestBase {
         cid.batchRegister(params);
         assertEq(cid.ownerOf(cid.getTokenId("alice")), aliceAddress);
         assertEq(cid.ownerOf(cid.getTokenId("bob")), bobAddress);
+
+        bytes32 reverseNode = keccak256(
+            abi.encodePacked(
+                bytes32(
+                    0x91d1777781884d03a6757a803996e38de2a42967fb37eeaca72729271025a9e2
+                ),
+                keccak256(bytes("1cc0c65ca5dd6b767338946f2c44c02040744ef5"))
+            )
+        );
+        assertEq(registry.owner(reverseNode), aliceAddress);
+        assertEq(registry.resolver(reverseNode), address(resolver));
+        assertEq(resolver.name(reverseNode), "alice.cyber");
     }
 
     function test_SupportsInterface_IAccessControlEnumerableUpgradeable_Success()
