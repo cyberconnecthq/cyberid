@@ -42,10 +42,10 @@ contract DeploySetting {
                 0xaB24749c622AF8FC567CA2b4d3EC53019F83dB8F
             );
             deployParams.protocolOwner = address(
-                0x7B23B874cD857C5968434F95674165a36CfD5E4e
+                0x7884f7F04F994da14302a16Cf15E597e31eebECf
             );
             deployParams.recipient = address(
-                0x7B23B874cD857C5968434F95674165a36CfD5E4e
+                0x7884f7F04F994da14302a16Cf15E597e31eebECf
             );
             deployParams.tokenReceiver = address(
                 0xcd97405Fb58e94954E825E46dB192b916A45d412
