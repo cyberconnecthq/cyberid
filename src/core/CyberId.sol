@@ -264,7 +264,7 @@ contract CyberId is
             middlewareData
         );
 
-        _register(msg.sender, cid, to, defaultResolver, false, cost);
+        _register(cid, to, defaultResolver, false, cost);
     }
 
     /**
@@ -443,14 +443,7 @@ contract CyberId is
         DataTypes.BatchRegisterCyberIdParams[] calldata params
     ) external onlyRole(_OPERATOR_ROLE) {
         for (uint256 i = 0; i < params.length; i++) {
-            _register(
-                msg.sender,
-                params[i].cid,
-                params[i].to,
-                params[i].resolver,
-                true,
-                0
-            );
+            _register(params[i].cid, params[i].to, params[i].resolver, true, 0);
         }
     }
 
@@ -481,7 +474,6 @@ contract CyberId is
     //////////////////////////////////////////////////////////////*/
 
     function _register(
-        address from,
         string calldata cid,
         address to,
         address resolver,
@@ -509,7 +501,7 @@ contract CyberId is
         }
         super._safeMint(to, tokenId);
         _supplyCount++;
-        emit Register(from, to, tokenId, cid, cost);
+        emit Register(msg.sender, to, tokenId, cid, cost);
     }
 
     function _setRecord(
