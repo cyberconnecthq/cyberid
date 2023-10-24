@@ -17,11 +17,11 @@ contract SetCyberIDInitState is Script, DeploySetting {
         ) {
             LibDeploy.setCyberIDInitState(
                 deployParams,
-                0x6AC6A275931f721A83Ed5d813C87aA7Bfb443c3C, // cyber id
-                0xC81e61eBDd2F4ce8e4242f7a866bd41935033d0a, // permissioned stable fee mw
-                0x783a3C984C315a16A813E3468464262e1dAe088E, // registry
-                0xF742d057a12dA8E6a1339C5a0DAb05130b86a1d1, // public resolver
-                0x04A49Ff8c8E6144738841f6FF0a8C04f82F71e3b // reverse registrar
+                0xe55793f55dF1F1B5037ebA41881663583d4f9B24, // cyber id
+                0x3Ec8E19306DF5A262b365E433Dd9A2A137a92FC3, // permissioned stable fee mw
+                0x5eA688312b97D5F1eD36DB65240a2e04f1Eb5899, // registry
+                0x2A40683b8664FEBdCDE113cb890F4CCd9B07F55E, // public resolver
+                0x0D56dA4A8cF09BEC31e22C66209605FF7DFB8ea2 // reverse registrar
             );
         }
         vm.stopBroadcast();

@@ -1,6 +1,9 @@
 | Contract                        | Address                                    |
 | ------------------------------- | ------------------------------------------ |
-| CyberId(Impl)                   | 0x71455a99fe9ed6e2501297b1331d135225a41b81 |
-| CyberId(Proxy)                  | 0x714638def68cf32a641b0735e489733b3187f431 |
-| StableFeeMiddleware             | 0x7b2c08c3cea0e9ad9337718fa65ea4a4d34afddb |
-| PermissionedStableFeeMiddleware | 0x889c6bb8d1dfbc0210007db15404afb4c4ba913e |
+| CyberIdRegistry                 | 0x5ea688312b97d5f1ed36db65240a2e04f1eb5899 |
+| CyberIdPublicResolver           | 0x2a40683b8664febdcde113cb890f4ccd9b07f55e |
+| CyberIdReverseRegistrar         | 0x0d56da4a8cf09bec31e22c66209605ff7dfb8ea2 |
+| CyberId(Impl)                   | 0x3f0cabe797a717a2ca97072942d66065bcf56ddc |
+| CyberId(Proxy)                  | 0xe55793f55df1f1b5037eba41881663583d4f9b24 |
+| StableFeeMiddleware             | 0xe6bdfa916949814bf2b9a334e74700ba7319ab32 |
+| PermissionedStableFeeMiddleware | 0x3ec8e19306df5a262b365e433dd9a2a137a92fc3 |

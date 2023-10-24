@@ -33,7 +33,7 @@ contract DeploySetting {
             );
         } else if (block.chainid == OP_GOERLI) {
             deployParams.deployerContract = address(
-                0xF191131dAB798dD6c500816338d4B6EBC34825C7
+                0x8eD1282a1aCE084De1E99E9Ce5ed68896C49d65f
             );
             deployParams.usdOracle = address(
                 0x57241A37733983F97C4Ab06448F244A1E0Ca0ba8

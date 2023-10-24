@@ -8,6 +8,7 @@ import { CyberId } from "../../src/core/CyberId.sol";
 import { RealmId } from "../../src/core/RealmId.sol";
 import { DeploySetting } from "./DeploySetting.sol";
 import { LibString } from "../../src/libraries/LibString.sol";
+import { DataTypes } from "../../src/libraries/DataTypes.sol";
 import { Create2Deployer } from "../../src/deployer/Create2Deployer.sol";
 import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { PermissionMw } from "../../src/middlewares/realmid/PermissionMw.sol";
@@ -116,7 +117,6 @@ library LibDeploy {
             keccak256(bytes("OPERATOR_ROLE")),
             params.signer
         );
-
         CyberIdReverseRegistrar(cyberIdReverseRegistrar).setDefaultResolver(
             address(cyberIdPublicResolver)
         );
