@@ -161,81 +161,81 @@ library LibDeploy {
     ) internal {
         Create2Deployer dc = Create2Deployer(params.deployerContract);
 
-        address cyberIdRegistry = dc.deploy(
-            abi.encodePacked(
-                type(CyberIdRegistry).creationCode,
-                abi.encode(params.protocolOwner)
-            ),
-            SALT
-        );
-        _write(vm, "CyberIdRegistry", cyberIdRegistry);
+        // address cyberIdRegistry = dc.deploy(
+        //     abi.encodePacked(
+        //         type(CyberIdRegistry).creationCode,
+        //         abi.encode(params.protocolOwner)
+        //     ),
+        //     SALT
+        // );
+        // _write(vm, "CyberIdRegistry", cyberIdRegistry);
 
-        address cyberIdPublicResolver = dc.deploy(
-            abi.encodePacked(
-                type(CyberIdPublicResolver).creationCode,
-                abi.encode(cyberIdRegistry, params.protocolOwner)
-            ),
-            SALT
-        );
-        _write(vm, "CyberIdPublicResolver", cyberIdPublicResolver);
+        // address cyberIdPublicResolver = dc.deploy(
+        //     abi.encodePacked(
+        //         type(CyberIdPublicResolver).creationCode,
+        //         abi.encode(cyberIdRegistry, params.protocolOwner)
+        //     ),
+        //     SALT
+        // );
+        // _write(vm, "CyberIdPublicResolver", cyberIdPublicResolver);
 
-        address cyberIdReverseRegistrar = dc.deploy(
-            abi.encodePacked(
-                type(CyberIdReverseRegistrar).creationCode,
-                abi.encode(cyberIdRegistry, params.protocolOwner)
-            ),
-            SALT
-        );
-        _write(vm, "CyberIdReverseRegistrar", cyberIdReverseRegistrar);
+        // address cyberIdReverseRegistrar = dc.deploy(
+        //     abi.encodePacked(
+        //         type(CyberIdReverseRegistrar).creationCode,
+        //         abi.encode(cyberIdRegistry, params.protocolOwner)
+        //     ),
+        //     SALT
+        // );
+        // _write(vm, "CyberIdReverseRegistrar", cyberIdReverseRegistrar);
 
         address cyberIdImpl = address(new CyberId());
         _write(vm, "CyberId(Impl)", cyberIdImpl);
-        address cyberIdProxy = dc.deploy(
-            abi.encodePacked(
-                type(ERC1967Proxy).creationCode,
-                abi.encode(
-                    cyberIdImpl,
-                    abi.encodeWithSelector(
-                        CyberId.initialize.selector,
-                        cyberIdRegistry,
-                        cyberIdPublicResolver,
-                        cyberIdReverseRegistrar,
-                        "CyberID",
-                        "CYBERID",
-                        params.protocolOwner
-                    )
-                )
-            ),
-            SALT
-        );
+        // address cyberIdProxy = dc.deploy(
+        //     abi.encodePacked(
+        //         type(ERC1967Proxy).creationCode,
+        //         abi.encode(
+        //             cyberIdImpl,
+        //             abi.encodeWithSelector(
+        //                 CyberId.initialize.selector,
+        //                 cyberIdRegistry,
+        //                 cyberIdPublicResolver,
+        //                 cyberIdReverseRegistrar,
+        //                 "CyberID",
+        //                 "CYBERID",
+        //                 params.protocolOwner
+        //             )
+        //         )
+        //     ),
+        //     SALT
+        // );
 
-        _write(vm, "CyberId(Proxy)", cyberIdProxy);
+        // _write(vm, "CyberId(Proxy)", cyberIdProxy);
 
-        address stableFeeMw = address(
-            dc.deploy(
-                abi.encodePacked(
-                    type(StableFeeMiddleware).creationCode,
-                    abi.encode(params.usdOracle, cyberIdProxy)
-                ),
-                SALT
-            )
-        );
-        _write(vm, "StableFeeMiddleware", stableFeeMw);
+        // address stableFeeMw = address(
+        //     dc.deploy(
+        //         abi.encodePacked(
+        //             type(StableFeeMiddleware).creationCode,
+        //             abi.encode(params.usdOracle, cyberIdProxy)
+        //         ),
+        //         SALT
+        //     )
+        // );
+        // _write(vm, "StableFeeMiddleware", stableFeeMw);
 
-        address permissionedStableFeeMw = address(
-            dc.deploy(
-                abi.encodePacked(
-                    type(PermissionedStableFeeMiddleware).creationCode,
-                    abi.encode(
-                        params.usdOracle,
-                        params.tokenReceiver,
-                        cyberIdProxy
-                    )
-                ),
-                SALT
-            )
-        );
-        _write(vm, "PermissionedStableFeeMiddleware", permissionedStableFeeMw);
+        // address permissionedStableFeeMw = address(
+        //     dc.deploy(
+        //         abi.encodePacked(
+        //             type(PermissionedStableFeeMiddleware).creationCode,
+        //             abi.encode(
+        //                 params.usdOracle,
+        //                 params.tokenReceiver,
+        //                 cyberIdProxy
+        //             )
+        //         ),
+        //         SALT
+        //     )
+        // );
+        // _write(vm, "PermissionedStableFeeMiddleware", permissionedStableFeeMw);
     }
 
     function deployRealmId(

@@ -264,7 +264,7 @@ contract CyberId is
             middlewareData
         );
 
-        _register(cid, to, defaultResolver, false, cost);
+        _register(cid, to, defaultResolver, msg.sender == to, cost);
     }
 
     /**
@@ -519,11 +519,16 @@ contract CyberId is
         address resolver,
         address owner
     ) internal {
-        ReverseRegistrar(reverseRegistrar).setNameForAddr(
-            owner,
-            owner,
-            resolver,
-            string.concat(name, ".cyber")
+        address currentOwner = ENS(cyberIdRegistry).owner(
+            ReverseRegistrar(reverseRegistrar).node(owner)
         );
+        if (currentOwner == address(0)) {
+            ReverseRegistrar(reverseRegistrar).setNameForAddr(
+                owner,
+                owner,
+                resolver,
+                string.concat(name, ".cyber")
+            );
+        }
     }
 }

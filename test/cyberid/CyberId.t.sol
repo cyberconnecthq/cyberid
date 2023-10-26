@@ -198,6 +198,64 @@ contract CyberIdTest is CyberIdTestBase {
         cid.batchRegister(params);
     }
 
+    function test_MintForOthers_ReverseResolve_NameNotSet() public {
+        bytes32 commitment2 = cid.generateCommit(
+            "alice",
+            bobAddress,
+            secret,
+            ""
+        );
+        cid.commit(commitment2);
+        vm.warp(startTs + 61 seconds);
+        cid.register("alice", bobAddress, secret, "");
+        bytes32 node = bytes32(cid.getTokenId("alice"));
+
+        assertEq(registry.owner(node), bobAddress);
+        assertEq(registry.resolver(node), address(resolver));
+        assertEq(resolver.addr(node), bobAddress);
+
+        bytes32 reverseNode = reverseRegistrar.node(bobAddress);
+        assertEq(registry.owner(reverseNode), address(0));
+        assertEq(registry.resolver(reverseNode), address(0));
+    }
+
+    function test_MintForSelf_ReverseResolve_OnlySetOnce() public {
+        cid.commit(commitment);
+        vm.warp(startTs + 61 seconds);
+        cid.register("alice", aliceAddress, secret, "");
+        bytes32 node = bytes32(cid.getTokenId("alice"));
+
+        assertEq(registry.owner(node), aliceAddress);
+        assertEq(registry.resolver(node), address(resolver));
+        assertEq(resolver.addr(node), aliceAddress);
+
+        bytes32 reverseNode = reverseRegistrar.node(aliceAddress);
+        assertEq(registry.owner(reverseNode), aliceAddress);
+        assertEq(registry.resolver(reverseNode), address(resolver));
+        assertEq(resolver.name(reverseNode), "alice.cyber");
+
+        bytes32 commitment2 = cid.generateCommit(
+            "alice2",
+            aliceAddress,
+            secret,
+            ""
+        );
+        cid.commit(commitment2);
+        vm.warp(startTs + 61 seconds + 61 seconds);
+        cid.register("alice2", aliceAddress, secret, "");
+
+        bytes32 node2 = bytes32(cid.getTokenId("alice2"));
+
+        assertEq(registry.owner(node2), aliceAddress);
+        assertEq(registry.resolver(node2), address(resolver));
+        assertEq(resolver.addr(node2), aliceAddress);
+
+        bytes32 reverseNode2 = reverseRegistrar.node(aliceAddress);
+        assertEq(registry.owner(reverseNode2), aliceAddress);
+        assertEq(registry.resolver(reverseNode2), address(resolver));
+        assertEq(resolver.name(reverseNode2), "alice.cyber");
+    }
+
     function test_WithRole_BatchRegister_Success() public {
         DataTypes.BatchRegisterCyberIdParams[]
             memory params = new DataTypes.BatchRegisterCyberIdParams[](2);
