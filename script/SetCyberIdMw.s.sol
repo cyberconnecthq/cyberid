@@ -32,6 +32,26 @@ contract SetCyberIdMw is Script, DeploySetting {
                     ]
                 )
             );
+        } else if (block.chainid == DeploySetting.OP) {
+            address cyberIdProxy = 0xe55793f55dF1F1B5037ebA41881663583d4f9B24;
+            CyberId(cyberIdProxy).setMiddleware(
+                0x40B9AD5DF1cc2EFacBFCc586e1b1B9E98BA72579,
+                abi.encode(
+                    true,
+                    deployParams.recipient,
+                    [
+                        uint256(10000 ether),
+                        2000 ether,
+                        1000 ether,
+                        500 ether,
+                        100 ether,
+                        50 ether,
+                        10 ether,
+                        5 ether
+                    ]
+                )
+            );
+            CyberId(cyberIdProxy).unpause();
         }
         vm.stopBroadcast();
     }
