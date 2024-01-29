@@ -6,6 +6,7 @@ import "forge-std/Test.sol";
 import "../../src/core/CyberId.sol";
 import { MockWallet } from "../utils/MockWallet.sol";
 import { MockUsdOracle } from "../utils/MockUsdOracle.sol";
+import { MockTokenReceiver } from "../utils/MockTokenReceiver.sol";
 import { DataTypes } from "../../src/libraries/DataTypes.sol";
 import { StableFeeMiddleware } from "../../src/middlewares/cyberid/StableFeeMiddleware.sol";
 import { CyberIdTestBase } from "../utils/CyberIdTestBase.sol";
@@ -27,12 +28,26 @@ contract CyberIdStableFeeMwTest is CyberIdTestBase {
         mockWalletAddress = address(mockWallet);
         vm.deal(mockWalletAddress, startBalance);
         MockUsdOracle oracle = new MockUsdOracle();
-        stableFeeMw = new StableFeeMiddleware(address(oracle), address(cid));
+        stableFeeMw = new StableFeeMiddleware(
+            address(oracle),
+            address(new MockTokenReceiver()),
+            address(cid)
+        );
         cid.setMiddleware(
             address(stableFeeMw),
             abi.encode(
+                false,
                 treasuryAddress,
-                [uint256(0), 0, 640 ether, 160 ether, 5 ether]
+                [
+                    uint256(10000 ether),
+                    2000 ether,
+                    1000 ether,
+                    500 ether,
+                    100 ether,
+                    50 ether,
+                    10 ether,
+                    5 ether
+                ]
             )
         );
         preData = abi.encode(uint80(1));

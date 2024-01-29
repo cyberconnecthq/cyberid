@@ -5,5 +5,5 @@
 | CyberIdReverseRegistrar         | 0x0d56da4a8cf09bec31e22c66209605ff7dfb8ea2 |
 | CyberId(Impl)                   | 0xa6778c3661e697054d457ac14650c8c88971a9c3 |
 | CyberId(Proxy)                  | 0xe55793f55df1f1b5037eba41881663583d4f9b24 |
-| StableFeeMiddleware             | 0xe6bdfa916949814bf2b9a334e74700ba7319ab32 |
 | PermissionedStableFeeMiddleware | 0x3ec8e19306df5a262b365e433dd9a2a137a92fc3 |
+| StableFeeMiddleware             | 0x40b9ad5df1cc2efacbfcc586e1b1b9e98ba72579 |
