@@ -18,6 +18,7 @@ contract DeploySetting {
     uint256 internal constant MUMBAI = 80001;
     uint256 internal constant OP_GOERLI = 420;
     uint256 internal constant OP = 10;
+    uint256 internal constant OP_SEPOLIA = 11155420;
 
     function _setDeployParams() internal {
         if (block.chainid == BASE_GOERLI) {
@@ -31,7 +32,7 @@ contract DeploySetting {
             deployParams.deployerContract = address(
                 0xF191131dAB798dD6c500816338d4B6EBC34825C7
             );
-        } else if (block.chainid == OP_GOERLI) {
+        } else if (block.chainid == OP_GOERLI || block.chainid == OP_SEPOLIA) {
             deployParams.deployerContract = address(
                 0x8eD1282a1aCE084De1E99E9Ce5ed68896C49d65f
             );

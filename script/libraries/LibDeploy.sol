@@ -34,6 +34,7 @@ library LibDeploy {
         else if (chainId == 80001) chainName = "mumbai";
         else if (chainId == 420) chainName = "op_goerli";
         else if (chainId == 10) chainName = "op";
+        else if (chainId == 11155420) chainName = "op_sepolia";
         else chainName = "unknown";
         return
             string(
@@ -86,7 +87,6 @@ library LibDeploy {
     function setCyberIDInitState(
         DeploySetting.DeployParameters memory params,
         address cyberIdProxy,
-        address permissionedStableFeeMw,
         address cyberIdRegistry,
         address cyberIdPublicResolver,
         address cyberIdReverseRegistrar
@@ -94,24 +94,6 @@ library LibDeploy {
         CyberId(cyberIdProxy).grantRole(
             keccak256(bytes("OPERATOR_ROLE")),
             params.protocolOwner
-        );
-        CyberId(cyberIdProxy).setMiddleware(
-            permissionedStableFeeMw,
-            abi.encode(
-                true,
-                params.signer,
-                params.recipient,
-                [
-                    uint256(10000 ether),
-                    2000 ether,
-                    1000 ether,
-                    500 ether,
-                    100 ether,
-                    50 ether,
-                    10 ether,
-                    5 ether
-                ]
-            )
         );
         CyberId(cyberIdProxy).grantRole(
             keccak256(bytes("OPERATOR_ROLE")),
@@ -159,7 +141,7 @@ library LibDeploy {
         Vm vm,
         DeploySetting.DeployParameters memory params,
         address cyberIdProxy
-    ) internal {
+    ) internal returns (address) {
         Create2Deployer dc = Create2Deployer(params.deployerContract);
         address stableFeeMw = address(
             dc.deploy(
@@ -175,6 +157,7 @@ library LibDeploy {
             )
         );
         _write(vm, "StableFeeMiddleware", stableFeeMw);
+        return stableFeeMw;
     }
 
     function deployCyberId(
@@ -233,31 +216,34 @@ library LibDeploy {
 
         _write(vm, "CyberId(Proxy)", cyberIdProxy);
 
-        address stableFeeMw = address(
-            dc.deploy(
-                abi.encodePacked(
-                    type(StableFeeMiddleware).creationCode,
-                    abi.encode(params.usdOracle, cyberIdProxy)
-                ),
-                SALT
-            )
+        setCyberIDInitState(
+            params,
+            cyberIdProxy,
+            cyberIdRegistry,
+            cyberIdPublicResolver,
+            cyberIdReverseRegistrar
         );
-        _write(vm, "StableFeeMiddleware", stableFeeMw);
 
-        address permissionedStableFeeMw = address(
-            dc.deploy(
-                abi.encodePacked(
-                    type(PermissionedStableFeeMiddleware).creationCode,
-                    abi.encode(
-                        params.usdOracle,
-                        params.tokenReceiver,
-                        cyberIdProxy
-                    )
-                ),
-                SALT
+        address stableFeeMw = deployCyberIdStableMw(vm, params, cyberIdProxy);
+
+        CyberId(cyberIdProxy).unpause();
+        CyberId(cyberIdProxy).setMiddleware(
+            stableFeeMw,
+            abi.encode(
+                true,
+                params.recipient,
+                [
+                    uint256(10000 ether),
+                    2000 ether,
+                    1000 ether,
+                    500 ether,
+                    100 ether,
+                    50 ether,
+                    10 ether,
+                    5 ether
+                ]
             )
         );
-        _write(vm, "PermissionedStableFeeMiddleware", permissionedStableFeeMw);
     }
 
     function deployRealmId(

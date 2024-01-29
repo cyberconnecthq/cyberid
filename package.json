@@ -14,6 +14,7 @@
     "gen_abi": "ts-node misc/gen_abi.ts",
     "deploy_realmid:mumbai": "source .env.mumbai && forge script script/DeployRealmId.s.sol:DeployRealmId --verify --rpc-url $RPC_URL --legacy --private-key $PRIVATE_KEY --broadcast -vvv",
     "deploy_cyberid:op_goerli": "source .env.op_goerli && forge script script/DeployCyberId.s.sol:DeployCyberId --verify --rpc-url $RPC_URL --private-key $PRIVATE_KEY  --etherscan-api-key $API_KEY --broadcast -vvv",
+    "deploy_cyberid:op_sepolia": "source .env.op_sepolia.owner && forge script script/DeployCyberId.s.sol:DeployCyberId --verify --rpc-url $RPC_URL --private-key $PRIVATE_KEY  --etherscan-api-key  $API_KEY --broadcast  --slow -vvv",
     "deploy_cyberid:op": "source .env.op && forge script script/DeployCyberId.s.sol:DeployCyberId --verify --rpc-url $RPC_URL --private-key $PRIVATE_KEY  --etherscan-api-key $API_KEY  --broadcast -vvv",
     "deploy_cyberid_stablemw:op_goerli": "source .env.op_goerli && forge script script/DeployCyberIdStableMw.s.sol:DeployCyberIdStableMw --verify --rpc-url $RPC_URL --private-key $PRIVATE_KEY  --etherscan-api-key $API_KEY --broadcast -vvv",
     "deploy_cyberid_stablemw:op": "source .env.op.owner && forge script script/DeployCyberIdStableMw.s.sol:DeployCyberIdStableMw --verify --rpc-url $RPC_URL --private-key $PRIVATE_KEY  --etherscan-api-key $API_KEY --broadcast -vvv",
