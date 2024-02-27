@@ -32,12 +32,31 @@ contract DeploySetting {
             deployParams.deployerContract = address(
                 0xF191131dAB798dD6c500816338d4B6EBC34825C7
             );
-        } else if (block.chainid == OP_GOERLI || block.chainid == OP_SEPOLIA) {
+        } else if (block.chainid == OP_GOERLI) {
             deployParams.deployerContract = address(
                 0x8eD1282a1aCE084De1E99E9Ce5ed68896C49d65f
             );
             deployParams.usdOracle = address(
                 0x57241A37733983F97C4Ab06448F244A1E0Ca0ba8
+            );
+            deployParams.signer = address(
+                0xaB24749c622AF8FC567CA2b4d3EC53019F83dB8F
+            );
+            deployParams.protocolOwner = address(
+                0x7884f7F04F994da14302a16Cf15E597e31eebECf
+            );
+            deployParams.recipient = address(
+                0x7884f7F04F994da14302a16Cf15E597e31eebECf
+            );
+            deployParams.tokenReceiver = address(
+                0xcd97405Fb58e94954E825E46dB192b916A45d412
+            );
+        } else if (block.chainid == OP_SEPOLIA) {
+            deployParams.deployerContract = address(
+                0x8eD1282a1aCE084De1E99E9Ce5ed68896C49d65f
+            );
+            deployParams.usdOracle = address(
+                0x61Ec26aA57019C486B10502285c5A3D4A4750AD7
             );
             deployParams.signer = address(
                 0xaB24749c622AF8FC567CA2b4d3EC53019F83dB8F

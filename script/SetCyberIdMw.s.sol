@@ -52,6 +52,30 @@ contract SetCyberIdMw is Script, DeploySetting {
                 )
             );
             CyberId(cyberIdProxy).unpause();
+        } else if (block.chainid == DeploySetting.OP_SEPOLIA) {
+            address cyberIdProxy = 0x484D1170d28EECda1200c32B186C66BE6e0332ec;
+            address stableFeeMw = LibDeploy.deployCyberIdStableMw(
+                vm,
+                deployParams,
+                cyberIdProxy
+            );
+            CyberId(cyberIdProxy).setMiddleware(
+                stableFeeMw,
+                abi.encode(
+                    true,
+                    deployParams.recipient,
+                    [
+                        uint256(10000 ether),
+                        2000 ether,
+                        1000 ether,
+                        500 ether,
+                        100 ether,
+                        50 ether,
+                        10 ether,
+                        5 ether
+                    ]
+                )
+            );
         }
         vm.stopBroadcast();
     }
