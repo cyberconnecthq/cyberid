@@ -84,7 +84,7 @@ contract DeploySetting {
                 0x7884f7F04F994da14302a16Cf15E597e31eebECf
             );
             deployParams.recipient = address(
-                0x3c9A8527B4a1555d93D092212EF2aee7176b6ef4
+                0x2f199646760aE75d423F4E98bb5249207ED1DC15
             );
             deployParams.tokenReceiver = address(
                 0xcd97405Fb58e94954E825E46dB192b916A45d412

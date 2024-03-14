@@ -37,7 +37,7 @@ contract SetCyberIdMw is Script, DeploySetting {
             CyberId(cyberIdProxy).setMiddleware(
                 0x40B9AD5DF1cc2EFacBFCc586e1b1B9E98BA72579,
                 abi.encode(
-                    true,
+                    false,
                     deployParams.recipient,
                     [
                         uint256(10000 ether),
@@ -51,7 +51,7 @@ contract SetCyberIdMw is Script, DeploySetting {
                     ]
                 )
             );
-            CyberId(cyberIdProxy).unpause();
+            // CyberId(cyberIdProxy).unpause();
         } else if (block.chainid == DeploySetting.OP_SEPOLIA) {
             address cyberIdProxy = 0x484D1170d28EECda1200c32B186C66BE6e0332ec;
             address stableFeeMw = LibDeploy.deployCyberIdStableMw(
