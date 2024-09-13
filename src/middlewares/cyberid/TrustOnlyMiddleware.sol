@@ -22,11 +22,6 @@ contract TrustOnlyMiddleware is Ownable, LowerCaseCyberIdMiddleware {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc ICyberIdMiddleware
-    function skipCommit() external pure override returns (bool) {
-        return true;
-    }
-
-    /// @inheritdoc ICyberIdMiddleware
     function setMwData(bytes calldata data) external override onlyNameRegistry {
         address _owner = abi.decode(data, (address));
         _transferOwnership(_owner);

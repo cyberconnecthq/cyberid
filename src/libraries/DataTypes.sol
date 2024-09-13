@@ -24,13 +24,12 @@ library DataTypes {
 
     struct RegisterCyberIdParams {
         address msgSender;
-        string cid;
+        string[] cids;
         address to;
     }
 
     struct BatchRegisterCyberIdParams {
         string cid;
         address to;
-        address resolver;
     }
 }

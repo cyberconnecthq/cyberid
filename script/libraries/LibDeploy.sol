@@ -14,7 +14,6 @@ import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC
 import { PermissionMw } from "../../src/middlewares/realmid/PermissionMw.sol";
 import { StableFeeMiddleware } from "../../src/middlewares/cyberid/StableFeeMiddleware.sol";
 import { TrustOnlyMiddleware } from "../../src/middlewares/cyberid/TrustOnlyMiddleware.sol";
-import { PermissionMiddleware } from "../../src/middlewares/cyberid/PermissionMiddleware.sol";
 import { PermissionedStableFeeMiddleware } from "../../src/middlewares/cyberid/PermissionedStableFeeMiddleware.sol";
 import { CyberIdRegistry } from "../../src/core/CyberIdRegistry.sol";
 import { CyberIdPublicResolver } from "../../src/core/CyberIdPublicResolver.sol";

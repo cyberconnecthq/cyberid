@@ -129,14 +129,12 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware, ReentrancyGuard {
         nonReentrant
         returns (uint256)
     {
-        uint256 cost = getPriceWei(params.cid);
+        uint256 cost;
+        for (uint256 i = 0; i < params.cids.length; i++) {
+            cost += getPriceWei(params.cids[i]);
+        }
         _chargeAndRefundOverPayment(cost, params.to, params.msgSender);
         return cost;
-    }
-
-    /// @inheritdoc ICyberIdMiddleware
-    function skipCommit() external pure virtual override returns (bool) {
-        return true;
     }
 
     /*//////////////////////////////////////////////////////////////

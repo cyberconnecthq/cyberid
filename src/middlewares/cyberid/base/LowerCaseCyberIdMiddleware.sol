@@ -36,11 +36,6 @@ abstract contract LowerCaseCyberIdMiddleware is ICyberIdMiddleware {
     //////////////////////////////////////////////////////////////*/
 
     /// @inheritdoc ICyberIdMiddleware
-    function skipCommit() external pure virtual override returns (bool) {
-        return false;
-    }
-
-    /// @inheritdoc ICyberIdMiddleware
     function namePatternValid(
         string calldata name
     ) external pure virtual override returns (bool) {

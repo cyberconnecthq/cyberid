@@ -50,11 +50,6 @@ contract CyberId is
     address public middleware;
 
     /**
-     * @notice Maps each commit to the timestamp at which it was created.
-     */
-    mapping(bytes32 => uint256) public timestampOf;
-
-    /**
      * @notice Token URI prefix.
      */
     string public baseTokenURI;
@@ -117,12 +112,6 @@ contract CyberId is
                                 CONSTANTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @dev enforced delay between cmommit() and register() to prevent front-running
-    uint256 internal constant _REVEAL_DELAY = 60 seconds;
-
-    /// @dev enforced delay in commit() to prevent griefing by replaying the commit
-    uint256 internal constant _COMMIT_REPLAY_DELAY = 1 days;
-
     bytes32 internal constant _OPERATOR_ROLE =
         keccak256(bytes("OPERATOR_ROLE"));
 
@@ -175,109 +164,39 @@ contract CyberId is
      */
     function available(string calldata cid) public view returns (bool) {
         require(middleware != address(0), "MIDDLEWARE_NOT_SET");
-        return ICyberIdMiddleware(middleware).namePatternValid(cid);
+        return
+            ICyberIdMiddleware(middleware).namePatternValid(cid) &&
+            !_exists(getTokenId(cid));
     }
 
     /**
-     * @notice Generates a commitment to use in a commit-reveal scheme to register a cid and
-     *         prevent front-running.
+     * @notice Mints a new cid.
      *
-     * @param cid            The cid to registere
+     * @param cids           The cids to register
      * @param to             The address that will own the cid
-     * @param secret         A secret that will be broadcast on-chain during the reveal
-     * @param middlewareData Data for middleware to process
-     */
-    function generateCommit(
-        string calldata cid,
-        address to,
-        bytes32 secret,
-        bytes calldata middlewareData
-    ) public pure returns (bytes32) {
-        bytes32 label = keccak256(bytes(cid));
-        return keccak256(abi.encodePacked(label, to, secret, middlewareData));
-    }
-
-    /**
-     * @notice Saves a commitment on-chain which can be revealed later to register a cid. The
-     *         commit reveal scheme protects the register action from being front run.
-     *
-     * @param commitment The commitment hash to be saved on-chain
-     */
-    function commit(bytes32 commitment) external {
-        /**
-         * Revert unless some time has passed since the last commit to prevent griefing by
-         * replaying the commit and restarting the _REVEAL_DELAY timer.
-         *
-         * Safety: cannot overflow because timestampOf[commitment] is a block.timestamp or zero
-         */
-        unchecked {
-            require(
-                block.timestamp >
-                    timestampOf[commitment] + _COMMIT_REPLAY_DELAY,
-                "COMMIT_REPLAY"
-            );
-        }
-
-        timestampOf[commitment] = block.timestamp;
-    }
-
-    /**
-     * @notice Mints a new cid if the inputs match a previous commit and if it was called at least
-     *         60 seconds after the commit's timestamp to prevent frontrunning within the same block.
-     *
-     * @param cid            The cid to register
-     * @param to             The address that will own the cid
-     * @param secret         The secret value in the commitment
      * @param middlewareData Data for middleware to process
      */
     function register(
-        string calldata cid,
+        string[] calldata cids,
         address to,
-        bytes32 secret,
         bytes calldata middlewareData
     ) external payable {
         require(middleware != address(0), "MIDDLEWARE_NOT_SET");
-        if (!ICyberIdMiddleware(middleware).skipCommit()) {
-            bytes32 commitment = generateCommit(
-                cid,
-                to,
-                secret,
-                middlewareData
-            );
-            uint256 commitTs = timestampOf[commitment];
-            unchecked {
-                require(
-                    block.timestamp <= commitTs + _COMMIT_REPLAY_DELAY,
-                    "NOT_COMMITTED"
-                );
-                require(
-                    block.timestamp > commitTs + _REVEAL_DELAY,
-                    "REGISTER_TOO_QUICK"
-                );
-            }
-            delete timestampOf[commitment];
-        }
 
-        uint256 cost;
-        cost = ICyberIdMiddleware(middleware).preRegister{ value: msg.value }(
-            DataTypes.RegisterCyberIdParams(msg.sender, cid, to),
+        uint256 cost = ICyberIdMiddleware(middleware).preRegister{
+            value: msg.value
+        }(
+            DataTypes.RegisterCyberIdParams(msg.sender, cids, to),
             middlewareData
         );
-
-        _register(cid, to, defaultResolver, msg.sender == to, cost);
-    }
-
-    /**
-     * @notice Burns a cyberid.
-     *
-     * @param cid The name to burn.
-     */
-    function burn(string calldata cid) external {
-        uint256 tokenId = getTokenId(cid);
-        require(_isApprovedOrOwner(msg.sender, tokenId), "UNAUTHORIZED");
-        super._burn(tokenId);
-        --_supplyCount;
-        emit Burn(msg.sender, tokenId);
+        for (uint256 i = 0; i < cids.length; i++) {
+            bytes memory byteName = bytes(cids[i]);
+            if (byteName.length > 20 || byteName.length < 3) {
+                // public mint does not allow names with less than 3 or more than 20 characters
+                revert("INVALID_NAME_LENGTH");
+            }
+            _register(cids[i], to, false, cost);
+        }
     }
 
     /**
@@ -443,8 +362,20 @@ contract CyberId is
         DataTypes.BatchRegisterCyberIdParams[] calldata params
     ) external onlyRole(_OPERATOR_ROLE) {
         for (uint256 i = 0; i < params.length; i++) {
-            _register(params[i].cid, params[i].to, params[i].resolver, true, 0);
+            _register(params[i].cid, params[i].to, true, 0);
         }
+    }
+
+    /**
+     * @notice Burns a cyberid.
+     *
+     * @param cid The name to burn.
+     */
+    function burn(string calldata cid) external onlyRole(_OPERATOR_ROLE) {
+        uint256 tokenId = getTokenId(cid);
+        super._burn(tokenId);
+        --_supplyCount;
+        emit Burn(msg.sender, tokenId);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -476,28 +407,24 @@ contract CyberId is
     function _register(
         string calldata cid,
         address to,
-        address resolver,
         bool setReverse,
         uint256 cost
     ) internal {
         require(available(cid), "NAME_NOT_AVAILABLE");
-        if (resolver == address(0)) {
-            resolver = defaultResolver;
-        }
         bytes32 label = keccak256(bytes(cid));
         ENS(cyberIdRegistry).setSubnodeRecord(
             _CYBER_NODE,
             label,
             to,
-            resolver,
+            defaultResolver,
             0
         );
         bytes32 nodeHash = keccak256(abi.encodePacked(_CYBER_NODE, label));
         uint256 tokenId = uint256(nodeHash);
         labels[tokenId] = cid;
-        _setRecord(resolver, nodeHash, to);
+        _setRecord(defaultResolver, nodeHash, to);
         if (setReverse) {
-            _setReverseRecord(cid, resolver, to);
+            _setReverseRecord(cid, defaultResolver, to);
         }
         super._safeMint(to, tokenId);
         _supplyCount++;

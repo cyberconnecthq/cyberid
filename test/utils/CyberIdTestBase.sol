@@ -99,6 +99,5 @@ abstract contract CyberIdTestBase is Test {
         // set timestamp to startTs
         vm.warp(startTs);
         vm.deal(aliceAddress, startBalance);
-        commitment = cid.generateCommit("alice", aliceAddress, secret, "");
     }
 }

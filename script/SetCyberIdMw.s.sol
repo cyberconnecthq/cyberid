@@ -35,9 +35,10 @@ contract SetCyberIdMw is Script, DeploySetting {
         } else if (block.chainid == DeploySetting.OP) {
             address cyberIdProxy = 0xe55793f55dF1F1B5037ebA41881663583d4f9B24;
             CyberId(cyberIdProxy).setMiddleware(
-                0x40B9AD5DF1cc2EFacBFCc586e1b1B9E98BA72579,
+                0x3Ec8E19306DF5A262b365E433Dd9A2A137a92FC3,
                 abi.encode(
                     false,
+                    deployParams.signer,
                     deployParams.recipient,
                     [
                         uint256(10000 ether),

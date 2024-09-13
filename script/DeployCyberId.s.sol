@@ -14,7 +14,9 @@ contract DeployCyberId is Script, DeploySetting {
         if (
             block.chainid == DeploySetting.OP_GOERLI ||
             block.chainid == DeploySetting.OP ||
-            block.chainid == DeploySetting.OP_SEPOLIA
+            block.chainid == DeploySetting.OP_SEPOLIA ||
+            block.chainid == DeploySetting.CYBER_TESTNET ||
+            block.chainid == DeploySetting.CYBER
         ) {
             LibDeploy.deployCyberId(vm, deployParams);
         }
