@@ -20,7 +20,7 @@ import { CyberIdReverseRegistrar } from "../../src/core/CyberIdReverseRegistrar.
 
 library LibDeploy {
     // create2 deploy all contract with this protocol salt
-    bytes32 constant SALT = keccak256(bytes("CyberId"));
+    bytes32 constant SALT = keccak256(bytes("CyberID"));
 
     string internal constant OUTPUT_FILE = "docs/deploy/";
 

@@ -76,6 +76,8 @@ contract PermissionedStableFeeMiddleware is
         uint256 price10AndMoreLetter
     );
 
+    event SigUsed(address indexed account, FeeType feeType, uint256 nonce);
+
     /*//////////////////////////////////////////////////////////////
                             CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
@@ -128,6 +130,7 @@ contract PermissionedStableFeeMiddleware is
             (FeeType, uint256, uint8, bytes32, bytes32, uint256)
         );
 
+        uint256 currentNonce = nonces[params.to][feeType]++;
         _requiresExpectedSigner(
             _hashTypedDataV4(
                 keccak256(
@@ -135,7 +138,7 @@ contract PermissionedStableFeeMiddleware is
                         _REGISTER_TYPEHASH,
                         _encodeCids(params.cids),
                         params.to,
-                        nonces[params.to][feeType]++,
+                        currentNonce,
                         sig.deadline,
                         discount
                     )
@@ -147,6 +150,7 @@ contract PermissionedStableFeeMiddleware is
             sig.s,
             sig.deadline
         );
+        emit SigUsed(params.to, feeType, currentNonce);
         uint256 cost = 0;
         if (discount > 0) {
             for (uint256 i = 0; i < params.cids.length; i++) {

@@ -7,7 +7,6 @@ const writeAbi = async () => {
     "RealmId.sol/RealmId.json",
     "PermissionMw.sol/PermissionMw.json",
     "StableFeeMiddleware.sol/StableFeeMiddleware.json",
-    "TrustOnlyMiddleware.sol/TrustOnlyMiddleware.json",
     "PermissionedStableFeeMiddleware.sol/PermissionedStableFeeMiddleware.json",
     "CyberIdRegistry.sol/CyberIdRegistry.json",
     "CyberIdPublicResolver.sol/CyberIdPublicResolver.json",
