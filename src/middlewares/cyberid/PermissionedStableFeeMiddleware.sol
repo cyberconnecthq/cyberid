@@ -76,7 +76,12 @@ contract PermissionedStableFeeMiddleware is
         uint256 price10AndMoreLetter
     );
 
-    event SigUsed(address indexed account, FeeType feeType, uint256 nonce);
+    event SigUsed(
+        address indexed account,
+        FeeType feeType,
+        uint256 nonce,
+        string[] cids
+    );
 
     /*//////////////////////////////////////////////////////////////
                             CONSTRUCTOR
@@ -150,7 +155,7 @@ contract PermissionedStableFeeMiddleware is
             sig.s,
             sig.deadline
         );
-        emit SigUsed(params.to, feeType, currentNonce);
+        emit SigUsed(params.to, feeType, currentNonce, params.cids);
         uint256 cost = 0;
         if (discount > 0) {
             for (uint256 i = 0; i < params.cids.length; i++) {
