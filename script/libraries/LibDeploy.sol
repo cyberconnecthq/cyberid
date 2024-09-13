@@ -34,6 +34,8 @@ library LibDeploy {
         else if (chainId == 420) chainName = "op_goerli";
         else if (chainId == 10) chainName = "op";
         else if (chainId == 11155420) chainName = "op_sepolia";
+        else if (chainId == 111557560) chainName = "cyber_testnet";
+        else if (chainId == 7560) chainName = "cyber";
         else chainName = "unknown";
         return
             string(
@@ -136,6 +138,25 @@ library LibDeploy {
         );
     }
 
+    function deployCyberIdPermissionedStableMw(
+        Vm vm,
+        DeploySetting.DeployParameters memory params,
+        address cyberIdProxy
+    ) internal returns (address) {
+        Create2Deployer dc = Create2Deployer(params.deployerContract);
+        address permissionedStableFeeMw = address(
+            dc.deploy(
+                abi.encodePacked(
+                    type(PermissionedStableFeeMiddleware).creationCode,
+                    abi.encode(params.usdOracle, cyberIdProxy)
+                ),
+                SALT
+            )
+        );
+        _write(vm, "PermissionedStableFeeMiddleware", permissionedStableFeeMw);
+        return permissionedStableFeeMw;
+    }
+
     function deployCyberIdStableMw(
         Vm vm,
         DeploySetting.DeployParameters memory params,
@@ -223,24 +244,18 @@ library LibDeploy {
             cyberIdReverseRegistrar
         );
 
-        address stableFeeMw = deployCyberIdStableMw(vm, params, cyberIdProxy);
+        address stableFeeMw = deployCyberIdPermissionedStableMw(
+            vm,
+            params,
+            cyberIdProxy
+        );
 
-        CyberId(cyberIdProxy).unpause();
         CyberId(cyberIdProxy).setMiddleware(
             stableFeeMw,
             abi.encode(
-                true,
+                params.signer,
                 params.recipient,
-                [
-                    uint256(10000 ether),
-                    2000 ether,
-                    1000 ether,
-                    500 ether,
-                    100 ether,
-                    50 ether,
-                    10 ether,
-                    5 ether
-                ]
+                [uint256(100 ether), 40 ether, 10 ether, 4 ether]
             )
         );
     }

@@ -6,13 +6,29 @@ import "forge-std/Script.sol";
 import { DeploySetting } from "./libraries/DeploySetting.sol";
 import { LibDeploy } from "./libraries/LibDeploy.sol";
 import { CyberId } from "../src/core/CyberId.sol";
+import { PermissionedStableFeeMiddleware } from "../src/middlewares/cyberid/PermissionedStableFeeMiddleware.sol";
 
 contract SetCyberIdMw is Script, DeploySetting {
     function run() external {
         _setDeployParams();
         vm.startBroadcast();
 
-        if (block.chainid == DeploySetting.OP_GOERLI) {
+        if (block.chainid == DeploySetting.CYBER_TESTNET) {
+            address cyberIdProxy = 0x8176BF17FD44bF0D324A95a83aFA16c5e7843B50;
+            address mw = LibDeploy.deployCyberIdPermissionedStableMw(
+                vm,
+                deployParams,
+                cyberIdProxy
+            );
+            CyberId(cyberIdProxy).setMiddleware(
+                mw,
+                abi.encode(
+                    deployParams.signer,
+                    deployParams.recipient,
+                    [uint256(100 ether), 40 ether, 10 ether, 4 ether]
+                )
+            );
+        } else if (block.chainid == DeploySetting.OP_GOERLI) {
             address cyberIdProxy = 0x6AC6A275931f721A83Ed5d813C87aA7Bfb443c3C;
             CyberId(cyberIdProxy).unpause();
             CyberId(cyberIdProxy).setMiddleware(

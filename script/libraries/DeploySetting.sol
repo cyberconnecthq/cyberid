@@ -96,7 +96,7 @@ contract DeploySetting {
                 0x8eD1282a1aCE084De1E99E9Ce5ed68896C49d65f
             );
             deployParams.usdOracle = address(
-                0x13e3Ee699D1909E989722E753853AE30b17e08c5
+                0xe28cEAc8f90DF620096D88A28Aa1d426015AD098
             );
             deployParams.signer = address(
                 0xaB24749c622AF8FC567CA2b4d3EC53019F83dB8F

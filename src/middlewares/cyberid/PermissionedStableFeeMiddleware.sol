@@ -17,6 +17,12 @@ contract PermissionedStableFeeMiddleware is
     EIP712,
     ReentrancyGuard
 {
+    enum FeeType {
+        NORMAL,
+        DISCOUNT,
+        FREE
+    }
+
     /*//////////////////////////////////////////////////////////////
                             STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -47,11 +53,11 @@ contract PermissionedStableFeeMiddleware is
     /**
      * @notice User nonces that prevents signature replay.
      */
-    mapping(address => uint256) public nonces;
+    mapping(address => mapping(FeeType => uint256)) public nonces;
 
     bytes32 public constant _REGISTER_TYPEHASH =
         keccak256(
-            "register(string[] cids,address to,uint256 nonce,uint256 deadline,uint256 discount)"
+            "register(string[] cids,address to,uint8 feeType,uint256 discount,uint256 nonce,uint256 deadline)"
         );
 
     uint256 internal constant BASE = 1000;
@@ -115,9 +121,10 @@ contract PermissionedStableFeeMiddleware is
     ) external payable override onlyNameRegistry returns (uint256) {
         DataTypes.EIP712Signature memory sig;
         uint256 discount;
-        (sig.v, sig.r, sig.s, sig.deadline, discount) = abi.decode(
+        FeeType feeType;
+        (feeType, discount, sig.v, sig.r, sig.s, sig.deadline) = abi.decode(
             data,
-            (uint8, bytes32, bytes32, uint256, uint256)
+            (FeeType, uint256, uint8, bytes32, bytes32, uint256)
         );
 
         _requiresExpectedSigner(
@@ -127,7 +134,7 @@ contract PermissionedStableFeeMiddleware is
                         _REGISTER_TYPEHASH,
                         _encodeCids(params.cids),
                         params.to,
-                        nonces[params.to]++,
+                        nonces[params.to][feeType]++,
                         sig.deadline,
                         discount
                     )
@@ -217,8 +224,10 @@ contract PermissionedStableFeeMiddleware is
             (bool refundSuccess, ) = refundTo.call{ value: overpayment }("");
             require(refundSuccess, "REFUND_FAILED");
         }
-        (bool chargeSuccess, ) = recipient.call{ value: cost }("");
-        require(chargeSuccess, "CHARGE_FAILED");
+        if (cost > 0) {
+            (bool chargeSuccess, ) = recipient.call{ value: cost }("");
+            require(chargeSuccess, "CHARGE_FAILED");
+        }
     }
 
     /*//////////////////////////////////////////////////////////////

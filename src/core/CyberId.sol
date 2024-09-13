@@ -149,7 +149,6 @@ contract CyberId is
         __UUPSUpgradeable_init();
         __AccessControlEnumerable_init();
         __Pausable_init();
-        _pause();
         _grantRole(DEFAULT_ADMIN_ROLE, _owner);
     }
 
