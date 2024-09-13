@@ -6,7 +6,6 @@ import { AggregatorV3Interface } from "chainlink/contracts/src/v0.8/interfaces/A
 import { ReentrancyGuard } from "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
 import { ICyberIdMiddleware } from "../../interfaces/ICyberIdMiddleware.sol";
-import { ITokenReceiver } from "../../interfaces/ITokenReceiver.sol";
 
 import { DataTypes } from "../../libraries/DataTypes.sol";
 
@@ -23,16 +22,6 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware, ReentrancyGuard {
     AggregatorV3Interface public immutable usdOracle;
 
     /**
-     * @notice TokenReceiver contract address.
-     */
-    ITokenReceiver public immutable tokenReceiver;
-
-    /**
-     * If true, the middleware will charge the fee to token receiver.
-     */
-    bool public rebateEnabled;
-
-    /**
      * @notice The address that receives the fee.
      */
     address public recipient;
@@ -40,32 +29,22 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware, ReentrancyGuard {
     /**
      * @notice The price of each letter in USD.
      */
-    uint256 public price1Letter;
-    uint256 public price2Letter;
     uint256 public price3Letter;
     uint256 public price4Letter;
-    uint256 public price5Letter;
-    uint256 public price6Letter;
-    uint256 public price7To11Letter;
-    uint256 public price12AndMoreLetter;
+    uint256 public price5To9Letter;
+    uint256 public price10AndMoreLetter;
 
     /*//////////////////////////////////////////////////////////////
                             EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    event RebateChanged(bool rebateEnabled);
-
     event RecipientChanged(address recipient);
 
     event StableFeeChanged(
-        uint256 price1Letter,
-        uint256 price2Letter,
         uint256 price3Letter,
         uint256 price4Letter,
-        uint256 price5Letter,
-        uint256 price6Letter,
-        uint256 price7To11Letter,
-        uint256 price12AndMoreLetter
+        uint256 price5To9Letter,
+        uint256 price10AndMoreLetter
     );
 
     /*//////////////////////////////////////////////////////////////
@@ -74,11 +53,10 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware, ReentrancyGuard {
 
     constructor(
         address _oracleAddress,
-        address _tokenReceiver,
-        address cyberId
-    ) LowerCaseCyberIdMiddleware(cyberId) {
+        address _cyberId,
+        address _owner
+    ) LowerCaseCyberIdMiddleware(_cyberId, _owner) {
         usdOracle = AggregatorV3Interface(_oracleAddress);
-        tokenReceiver = ITokenReceiver(_tokenReceiver);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -87,34 +65,18 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware, ReentrancyGuard {
 
     /// @inheritdoc ICyberIdMiddleware
     function setMwData(bytes calldata data) external override onlyNameRegistry {
-        (
-            bool _rebateEnabled,
-            address _recipient,
-            uint256[8] memory prices
-        ) = abi.decode(data, (bool, address, uint256[8]));
-        rebateEnabled = _rebateEnabled;
-        recipient = _recipient;
-        price1Letter = prices[0];
-        price2Letter = prices[1];
-        price3Letter = prices[2];
-        price4Letter = prices[3];
-        price5Letter = prices[4];
-        price6Letter = prices[5];
-        price7To11Letter = prices[6];
-        price12AndMoreLetter = prices[7];
-
-        emit RebateChanged(_rebateEnabled);
-        emit RecipientChanged(_recipient);
-        emit StableFeeChanged(
-            prices[0],
-            prices[1],
-            prices[2],
-            prices[3],
-            prices[4],
-            prices[5],
-            prices[6],
-            prices[7]
+        (address _recipient, uint256[4] memory prices) = abi.decode(
+            data,
+            (address, uint256[4])
         );
+        recipient = _recipient;
+        price3Letter = prices[0];
+        price4Letter = prices[1];
+        price5To9Letter = prices[2];
+        price10AndMoreLetter = prices[3];
+
+        emit RecipientChanged(_recipient);
+        emit StableFeeChanged(prices[0], prices[1], prices[2], prices[3]);
     }
 
     /// @inheritdoc ICyberIdMiddleware
@@ -133,7 +95,7 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware, ReentrancyGuard {
         for (uint256 i = 0; i < params.cids.length; i++) {
             cost += getPriceWei(params.cids[i]);
         }
-        _chargeAndRefundOverPayment(cost, params.to, params.msgSender);
+        _chargeAndRefundOverPayment(cost, params.msgSender);
         return cost;
     }
 
@@ -154,22 +116,16 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware, ReentrancyGuard {
         uint256 len = bytes(cid).length;
         uint256 usdPrice;
 
-        if (len >= 12) {
-            usdPrice = price12AndMoreLetter;
-        } else if (len >= 7) {
-            usdPrice = price7To11Letter;
-        } else if (len == 6) {
-            usdPrice = price6Letter;
-        } else if (len == 5) {
-            usdPrice = price5Letter;
+        if (len >= 10) {
+            usdPrice = price10AndMoreLetter;
+        } else if (len >= 5) {
+            usdPrice = price5To9Letter;
         } else if (len == 4) {
             usdPrice = price4Letter;
         } else if (len == 3) {
             usdPrice = price3Letter;
-        } else if (len == 2) {
-            usdPrice = price2Letter;
         } else {
-            usdPrice = price1Letter;
+            revert("INVALID_CID_LENGTH");
         }
         return usdPrice;
     }
@@ -196,7 +152,6 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware, ReentrancyGuard {
 
     function _chargeAndRefundOverPayment(
         uint256 cost,
-        address depositTo,
         address refundTo
     ) internal {
         require(msg.value >= cost, "INSUFFICIENT_FUNDS");
@@ -212,9 +167,7 @@ contract StableFeeMiddleware is LowerCaseCyberIdMiddleware, ReentrancyGuard {
             (bool refundSuccess, ) = refundTo.call{ value: overpayment }("");
             require(refundSuccess, "REFUND_FAILED");
         }
-        if (rebateEnabled) {
-            tokenReceiver.depositTo{ value: cost }(depositTo);
-        } else {
+        if (cost > 0) {
             (bool chargeSuccess, ) = recipient.call{ value: cost }("");
             require(chargeSuccess, "CHARGE_FAILED");
         }

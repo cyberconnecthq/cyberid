@@ -357,11 +357,11 @@ contract CyberId is
         emit MiddlewareSet(_middleware, data);
     }
 
-    function batchRegister(
+    function privilegedRegister(
         DataTypes.BatchRegisterCyberIdParams[] calldata params
     ) external onlyRole(_OPERATOR_ROLE) {
         for (uint256 i = 0; i < params.length; i++) {
-            _register(params[i].cid, params[i].to, true, 0);
+            _register(params[i].cid, params[i].to, params[i].setReverse, 0);
         }
     }
 

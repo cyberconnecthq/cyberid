@@ -13,7 +13,6 @@ import { Create2Deployer } from "../../src/deployer/Create2Deployer.sol";
 import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { PermissionMw } from "../../src/middlewares/realmid/PermissionMw.sol";
 import { StableFeeMiddleware } from "../../src/middlewares/cyberid/StableFeeMiddleware.sol";
-import { TrustOnlyMiddleware } from "../../src/middlewares/cyberid/TrustOnlyMiddleware.sol";
 import { PermissionedStableFeeMiddleware } from "../../src/middlewares/cyberid/PermissionedStableFeeMiddleware.sol";
 import { CyberIdRegistry } from "../../src/core/CyberIdRegistry.sol";
 import { CyberIdPublicResolver } from "../../src/core/CyberIdPublicResolver.sol";
@@ -148,7 +147,11 @@ library LibDeploy {
             dc.deploy(
                 abi.encodePacked(
                     type(PermissionedStableFeeMiddleware).creationCode,
-                    abi.encode(params.usdOracle, cyberIdProxy)
+                    abi.encode(
+                        params.usdOracle,
+                        cyberIdProxy,
+                        params.protocolOwner
+                    )
                 ),
                 SALT
             )
@@ -169,8 +172,8 @@ library LibDeploy {
                     type(StableFeeMiddleware).creationCode,
                     abi.encode(
                         params.usdOracle,
-                        params.tokenReceiver,
-                        cyberIdProxy
+                        cyberIdProxy,
+                        params.protocolOwner
                     )
                 ),
                 SALT

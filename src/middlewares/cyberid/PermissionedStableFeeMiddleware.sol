@@ -82,8 +82,9 @@ contract PermissionedStableFeeMiddleware is
 
     constructor(
         address _oracleAddress,
-        address cyberId
-    ) LowerCaseCyberIdMiddleware(cyberId) {
+        address _cyberId,
+        address _owner
+    ) LowerCaseCyberIdMiddleware(_cyberId, _owner) {
         usdOracle = AggregatorV3Interface(_oracleAddress);
     }
 
@@ -181,8 +182,10 @@ contract PermissionedStableFeeMiddleware is
             usdPrice = price5To9Letter;
         } else if (len == 4) {
             usdPrice = price4Letter;
-        } else {
+        } else if (len == 3) {
             usdPrice = price3Letter;
+        } else {
+            revert("INVALID_CID_LENGTH");
         }
         return usdPrice;
     }

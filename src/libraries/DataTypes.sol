@@ -31,5 +31,6 @@ library DataTypes {
     struct BatchRegisterCyberIdParams {
         string cid;
         address to;
+        bool setReverse;
     }
 }
