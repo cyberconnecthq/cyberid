@@ -143,9 +143,10 @@ contract PermissionedStableFeeMiddleware is
                         _REGISTER_TYPEHASH,
                         _encodeCids(params.cids),
                         params.to,
+                        feeType,
+                        discount,
                         currentNonce,
-                        sig.deadline,
-                        discount
+                        sig.deadline
                     )
                 )
             ),

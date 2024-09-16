@@ -14,7 +14,7 @@ contract SetCyberIdMw is Script, DeploySetting {
         vm.startBroadcast();
 
         if (block.chainid == DeploySetting.CYBER_TESTNET) {
-            address cyberIdProxy = 0x8176BF17FD44bF0D324A95a83aFA16c5e7843B50;
+            address cyberIdProxy = 0x58688732998f6c9f7Bde811C6576AD471C373061;
             address mw = LibDeploy.deployCyberIdPermissionedStableMw(
                 vm,
                 deployParams,

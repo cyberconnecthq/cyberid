@@ -261,6 +261,9 @@ library LibDeploy {
                 [uint256(100 ether), 40 ether, 10 ether, 4 ether]
             )
         );
+        CyberId(cyberIdProxy).setBaseTokenURI(
+            "https://metadata.cyberconnect.dev/nfts/cyberid/"
+        );
     }
 
     function deployRealmId(
