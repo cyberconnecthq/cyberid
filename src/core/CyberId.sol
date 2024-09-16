@@ -180,6 +180,8 @@ contract CyberId is
         address to,
         bytes calldata middlewareData
     ) external payable {
+        require(cids.length != 0, "NO_NAME_PROVIDED");
+        require(to != address(0), "INVALID_ADDRESS");
         require(middleware != address(0), "MIDDLEWARE_NOT_SET");
 
         uint256 cost = ICyberIdMiddleware(middleware).preRegister{
@@ -189,11 +191,6 @@ contract CyberId is
             middlewareData
         );
         for (uint256 i = 0; i < cids.length; i++) {
-            bytes memory byteName = bytes(cids[i]);
-            if (byteName.length > 20 || byteName.length < 3) {
-                // public mint does not allow names with less than 3 or more than 20 characters
-                revert("INVALID_NAME_LENGTH");
-            }
             _register(cids[i], to, false, cost);
         }
     }

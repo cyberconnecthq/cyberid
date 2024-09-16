@@ -194,7 +194,7 @@ contract PermissionedStableFeeMiddleware is
         } else if (len == 3) {
             usdPrice = price3Letter;
         } else {
-            revert("INVALID_CID_LENGTH");
+            revert("INVALID_LENGTH");
         }
         return usdPrice;
     }
