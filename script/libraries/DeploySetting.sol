@@ -112,7 +112,7 @@ contract DeploySetting {
                 0x8eD1282a1aCE084De1E99E9Ce5ed68896C49d65f
             );
             deployParams.usdOracle = address(
-                0x13e3Ee699D1909E989722E753853AE30b17e08c5
+                0x100c8e61aB3BeA812A42976199Fc3daFbcDD7272
             );
             deployParams.signer = address(
                 0x2A2EA826102c067ECE82Bc6E2B7cf38D7EbB1B82
@@ -121,7 +121,7 @@ contract DeploySetting {
                 0x7884f7F04F994da14302a16Cf15E597e31eebECf
             );
             deployParams.recipient = address(
-                0x2f199646760aE75d423F4E98bb5249207ED1DC15
+                0x164F005B8D305ec60e10A039C36D099A8895323C
             );
         } else {
             revert("PARAMS_NOT_SET");
