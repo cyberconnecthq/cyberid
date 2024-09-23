@@ -211,7 +211,7 @@ contract PermissionedStableFeeMiddleware is
         ) = usdOracle.latestRoundData();
         require(roundID != 0, "INVALID_ORACLE_ROUND_ID");
         require(price > 0, "INVALID_ORACLE_PRICE");
-        require(updatedAt > block.timestamp - 3 hours, "STALE_ORACLE_PRICE");
+        require(updatedAt > block.timestamp - 12 hours, "STALE_ORACLE_PRICE");
         return price;
     }
 

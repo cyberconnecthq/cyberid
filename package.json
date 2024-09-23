@@ -25,6 +25,7 @@
     "set_cyberid_mw:op_sepolia": "source .env.op_sepolia.owner && forge script script/SetCyberIdMw.s.sol:SetCyberIdMw --rpc-url $RPC_URL --private-key $PRIVATE_KEY --verify   --etherscan-api-key $API_KEY  --broadcast --slow -vvv",
     "set_cyberid_mw:op": "source .env.op.owner && forge script script/SetCyberIdMw.s.sol:SetCyberIdMw --rpc-url $RPC_URL --private-key $PRIVATE_KEY  --broadcast -vvv",
     "set_cyberid_mw:cyber_testnet": "source .env.cyber_testnet.owner && forge script script/SetCyberIdMw.s.sol:SetCyberIdMw --rpc-url $RPC_URL --private-key $PRIVATE_KEY  --broadcast -vvv",
+    "set_cyberid_mw:cyber": "source .env.cyber.owner && forge script script/SetCyberIdMw.s.sol:SetCyberIdMw --rpc-url $RPC_URL --private-key $PRIVATE_KEY  --broadcast -vvv",
     "set_cyberid_init_state:op": "source .env.op.owner && forge script script/SetCyberIDInitState.s.sol:SetCyberIDInitState --rpc-url $RPC_URL --private-key $PRIVATE_KEY  --broadcast -vvv",
     "set_cyberid_init_state:op_goerli": "source .env.op_goerli.owner && forge script script/SetCyberIDInitState.s.sol:SetCyberIDInitState --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvv",
     "temp_script:op_goerli": "source .env.op_goerli.owner && forge script script/Tmp.s.sol:TempScript --rpc-url $RPC_URL --private-key $PRIVATE_KEY --broadcast -vvv",
