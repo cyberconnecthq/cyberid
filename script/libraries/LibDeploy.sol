@@ -13,8 +13,6 @@ import { Create2Deployer } from "../../src/deployer/Create2Deployer.sol";
 import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import { PermissionMw } from "../../src/middlewares/realmid/PermissionMw.sol";
 import { StableFeeMiddleware } from "../../src/middlewares/cyberid/StableFeeMiddleware.sol";
-import { TrustOnlyMiddleware } from "../../src/middlewares/cyberid/TrustOnlyMiddleware.sol";
-import { PermissionMiddleware } from "../../src/middlewares/cyberid/PermissionMiddleware.sol";
 import { PermissionedStableFeeMiddleware } from "../../src/middlewares/cyberid/PermissionedStableFeeMiddleware.sol";
 import { CyberIdRegistry } from "../../src/core/CyberIdRegistry.sol";
 import { CyberIdPublicResolver } from "../../src/core/CyberIdPublicResolver.sol";
@@ -22,7 +20,7 @@ import { CyberIdReverseRegistrar } from "../../src/core/CyberIdReverseRegistrar.
 
 library LibDeploy {
     // create2 deploy all contract with this protocol salt
-    bytes32 constant SALT = keccak256(bytes("CyberId"));
+    bytes32 constant SALT = keccak256(bytes("CyberID"));
 
     string internal constant OUTPUT_FILE = "docs/deploy/";
 
@@ -35,6 +33,8 @@ library LibDeploy {
         else if (chainId == 420) chainName = "op_goerli";
         else if (chainId == 10) chainName = "op";
         else if (chainId == 11155420) chainName = "op_sepolia";
+        else if (chainId == 111557560) chainName = "cyber_testnet";
+        else if (chainId == 7560) chainName = "cyber";
         else chainName = "unknown";
         return
             string(
@@ -137,6 +137,29 @@ library LibDeploy {
         );
     }
 
+    function deployCyberIdPermissionedStableMw(
+        Vm vm,
+        DeploySetting.DeployParameters memory params,
+        address cyberIdProxy
+    ) internal returns (address) {
+        Create2Deployer dc = Create2Deployer(params.deployerContract);
+        address permissionedStableFeeMw = address(
+            dc.deploy(
+                abi.encodePacked(
+                    type(PermissionedStableFeeMiddleware).creationCode,
+                    abi.encode(
+                        params.usdOracle,
+                        cyberIdProxy,
+                        params.protocolOwner
+                    )
+                ),
+                SALT
+            )
+        );
+        _write(vm, "PermissionedStableFeeMiddleware", permissionedStableFeeMw);
+        return permissionedStableFeeMw;
+    }
+
     function deployCyberIdStableMw(
         Vm vm,
         DeploySetting.DeployParameters memory params,
@@ -149,8 +172,8 @@ library LibDeploy {
                     type(StableFeeMiddleware).creationCode,
                     abi.encode(
                         params.usdOracle,
-                        params.tokenReceiver,
-                        cyberIdProxy
+                        cyberIdProxy,
+                        params.protocolOwner
                     )
                 ),
                 SALT
@@ -224,25 +247,22 @@ library LibDeploy {
             cyberIdReverseRegistrar
         );
 
-        address stableFeeMw = deployCyberIdStableMw(vm, params, cyberIdProxy);
+        address stableFeeMw = deployCyberIdPermissionedStableMw(
+            vm,
+            params,
+            cyberIdProxy
+        );
 
-        CyberId(cyberIdProxy).unpause();
         CyberId(cyberIdProxy).setMiddleware(
             stableFeeMw,
             abi.encode(
-                true,
+                params.signer,
                 params.recipient,
-                [
-                    uint256(10000 ether),
-                    2000 ether,
-                    1000 ether,
-                    500 ether,
-                    100 ether,
-                    50 ether,
-                    10 ether,
-                    5 ether
-                ]
+                [uint256(100 ether), 40 ether, 10 ether, 4 ether]
             )
+        );
+        CyberId(cyberIdProxy).setBaseTokenURI(
+            "https://metadata.cyberconnect.dev/nfts/cyberid/"
         );
     }
 

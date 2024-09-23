@@ -34,7 +34,7 @@ contract CyberIdPublicResolver is
     Ownable
 {
     ENS immutable cyberIdRegistry;
-    uint256 private constant COIN_TYPE_OPT = 614;
+    uint256 private constant COIN_TYPE_CYBER = 2147491208;
 
     address public trustedCyberIdRegistrar;
     address public trustedReverseRegistrar;
@@ -150,11 +150,11 @@ contract CyberIdPublicResolver is
         bytes32 node,
         address a
     ) external override authorised(node) {
-        super.setAddr(node, COIN_TYPE_OPT, addressToBytes(a));
+        super.setAddr(node, COIN_TYPE_CYBER, addressToBytes(a));
     }
 
     function addr(bytes32 node) public view override returns (address payable) {
-        bytes memory a = addr(node, COIN_TYPE_OPT);
+        bytes memory a = addr(node, COIN_TYPE_CYBER);
         if (a.length == 0) {
             return payable(0);
         }
@@ -167,7 +167,7 @@ contract CyberIdPublicResolver is
         bytes memory a
     ) public override authorised(node) {
         emit AddressChanged(node, coinType, a);
-        if (coinType == COIN_TYPE_OPT) {
+        if (coinType == COIN_TYPE_CYBER) {
             emit AddrChanged(node, bytesToAddress(a));
         }
         versionable_addresses[recordVersions[node]][node][coinType] = a;

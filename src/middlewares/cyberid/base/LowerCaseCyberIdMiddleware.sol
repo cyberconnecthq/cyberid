@@ -2,9 +2,14 @@
 
 pragma solidity 0.8.14;
 
+import { Ownable } from "openzeppelin-contracts/contracts/access/Ownable.sol";
+import { IERC20 } from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import { SafeERC20 } from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+
 import { ICyberIdMiddleware } from "../../../interfaces/ICyberIdMiddleware.sol";
 
-abstract contract LowerCaseCyberIdMiddleware is ICyberIdMiddleware {
+abstract contract LowerCaseCyberIdMiddleware is ICyberIdMiddleware, Ownable {
+    using SafeERC20 for IERC20;
     /*//////////////////////////////////////////////////////////////
                             STORAGE
     //////////////////////////////////////////////////////////////*/
@@ -15,8 +20,9 @@ abstract contract LowerCaseCyberIdMiddleware is ICyberIdMiddleware {
                             CONSTRUCTOR
     //////////////////////////////////////////////////////////////*/
 
-    constructor(address nameRegistry) {
+    constructor(address nameRegistry, address _owner) Ownable() {
         NAME_REGISTRY = nameRegistry;
+        _transferOwnership(_owner);
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -34,11 +40,6 @@ abstract contract LowerCaseCyberIdMiddleware is ICyberIdMiddleware {
     /*//////////////////////////////////////////////////////////////
                     ICyberIdMiddleware OVERRIDES
     //////////////////////////////////////////////////////////////*/
-
-    /// @inheritdoc ICyberIdMiddleware
-    function skipCommit() external pure virtual override returns (bool) {
-        return false;
-    }
 
     /// @inheritdoc ICyberIdMiddleware
     function namePatternValid(
@@ -62,5 +63,21 @@ abstract contract LowerCaseCyberIdMiddleware is ICyberIdMiddleware {
             }
         }
         return true;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                    ONLY OWNER
+    //////////////////////////////////////////////////////////////*/
+
+    function rescueToken(address token) external onlyOwner {
+        if (token == address(0)) {
+            (bool success, ) = owner().call{ value: address(this).balance }("");
+            require(success, "WITHDRAW_FAILED");
+        } else {
+            IERC20(token).safeTransfer(
+                owner(),
+                IERC20(token).balanceOf(address(this))
+            );
+        }
     }
 }
