@@ -115,7 +115,7 @@ contract DeploySetting {
                 0x100c8e61aB3BeA812A42976199Fc3daFbcDD7272
             );
             deployParams.signer = address(
-                0x2A2EA826102c067ECE82Bc6E2B7cf38D7EbB1B82
+                0xB6f53FCF8a8F9e2b9D7C5fCf1D6D052496e8A098
             );
             deployParams.protocolOwner = address(
                 0x7884f7F04F994da14302a16Cf15E597e31eebECf
