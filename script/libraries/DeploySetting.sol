@@ -23,35 +23,9 @@ contract DeploySetting {
     uint256 internal constant CYBER = 7560;
 
     function _setDeployParams() internal {
-        if (block.chainid == BASE_GOERLI) {
+        if (block.chainid == MUMBAI) {
             deployParams.deployerContract = address(
                 0xF191131dAB798dD6c500816338d4B6EBC34825C7
-            );
-            deployParams.usdOracle = address(
-                0xcD2A119bD1F7DF95d706DE6F2057fDD45A0503E2
-            );
-        } else if (block.chainid == MUMBAI) {
-            deployParams.deployerContract = address(
-                0xF191131dAB798dD6c500816338d4B6EBC34825C7
-            );
-        } else if (block.chainid == OP_GOERLI) {
-            deployParams.deployerContract = address(
-                0x8eD1282a1aCE084De1E99E9Ce5ed68896C49d65f
-            );
-            deployParams.usdOracle = address(
-                0x57241A37733983F97C4Ab06448F244A1E0Ca0ba8
-            );
-            deployParams.signer = address(
-                0xaB24749c622AF8FC567CA2b4d3EC53019F83dB8F
-            );
-            deployParams.protocolOwner = address(
-                0x7884f7F04F994da14302a16Cf15E597e31eebECf
-            );
-            deployParams.recipient = address(
-                0x7884f7F04F994da14302a16Cf15E597e31eebECf
-            );
-            deployParams.tokenReceiver = address(
-                0xcd97405Fb58e94954E825E46dB192b916A45d412
             );
         } else if (block.chainid == OP_SEPOLIA) {
             deployParams.deployerContract = address(
@@ -96,7 +70,7 @@ contract DeploySetting {
                 0x8eD1282a1aCE084De1E99E9Ce5ed68896C49d65f
             );
             deployParams.usdOracle = address(
-                0xe28cEAc8f90DF620096D88A28Aa1d426015AD098
+                0xfc0d41f89F43A54E8B2cce3a9F064b15682A0F22
             );
             deployParams.signer = address(
                 0xaB24749c622AF8FC567CA2b4d3EC53019F83dB8F
@@ -112,7 +86,7 @@ contract DeploySetting {
                 0x8eD1282a1aCE084De1E99E9Ce5ed68896C49d65f
             );
             deployParams.usdOracle = address(
-                0x100c8e61aB3BeA812A42976199Fc3daFbcDD7272
+                0xfc0d41f89F43A54E8B2cce3a9F064b15682A0F22
             );
             deployParams.signer = address(
                 0xB6f53FCF8a8F9e2b9D7C5fCf1D6D052496e8A098
