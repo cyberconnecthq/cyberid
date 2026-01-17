@@ -36,6 +36,9 @@
     "verify_permissionmw:mumbai": "source .env.mumbai && ETHERSCAN_API_KEY=$API_KEY forge verify-contract --chain-id 80001 --compiler-version v0.8.14+commit.80d49f37 --constructor-args 0000000000000000000000001ef669e1a6d2aeef4741761488d473ece9810b05 0x31f627dc0030334e62f8ca53c3cf730bb8417081 src/middlewares/realmid/PermissionMw.sol:PermissionMw  --watch",
     "verify_realmid:mumbai": "source .env.mumbai && ETHERSCAN_API_KEY=$API_KEY forge verify-contract --chain-id 80001 --compiler-version v0.8.14+commit.80d49f37 0xf7cc42298b05931d93cd81d9513f8ed4ebe6bde1 src/core/RealmId.sol:RealmId  --watch"
   },
+  "dependencies": {
+    "elliptic": "npm:@soatok/elliptic-to-noble@^9999.0.0"
+  },
   "devDependencies": {
     "husky": "^8.0.1",
     "lint-staged": "^13.0.1",
@@ -64,7 +67,7 @@
     ]
   },
   "resolutions": {
-    "elliptic": ">=6.6.1",
+    "elliptic": "npm:@soatok/elliptic-to-noble@^9999.0.0",
     "pbkdf2": ">=3.1.3",
     "form-data": "^2.5.4",
     "cipher-base": ">=1.0.5",
